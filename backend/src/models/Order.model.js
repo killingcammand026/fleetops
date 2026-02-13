@@ -7,12 +7,12 @@ const orderSchema=new mongoose.Schema({
         unique:true,
         index:true,
     },
-    customerId:{
+    customer:{
         type:mongoose.Schema.Types.ObjectId,
         ref:"Customer",
         required:true,
     },
-    driverId:{
+    driver:{
         type:mongoose.Schema.Types.ObjectId,
         ref:"Driver",
         default:null,
@@ -25,7 +25,7 @@ const orderSchema=new mongoose.Schema({
         },
         coordinates:{
             type:[Number], // [longitude, latitude]
-            index:"2dsphere"        
+            required:true,
         },
     },
     dropLocation:{
@@ -36,7 +36,7 @@ const orderSchema=new mongoose.Schema({
         },
         coordinates:{
             type:[Number], // [longitude, latitude]
-            index:"2dsphere"        
+            required:true,      
         },
     },
     //order lifecycle status
@@ -56,6 +56,7 @@ const orderSchema=new mongoose.Schema({
         method:{
             type:String,
             enum:["Credit Card","UPI","COD","Wallet"],
+            default:"COD",
             required:true,
         },
         status:{
@@ -90,4 +91,4 @@ const orderSchema=new mongoose.Schema({
 orderSchema.index({pickupLocation:"2dsphere"});
 orderSchema.index({dropLocation:"2dsphere"});
 
-module.exports = mongoose.model("Order",orderSchema);
+export default mongoose.model("Order",orderSchema);

@@ -12,4 +12,4 @@ const NotificationSchema = new mongoose.Schema({
     },
     status:String, //e.g., Unread, Read, Archived
 });
-module.exports = mongoose.model("Notification",NotificationSchema);
+export default mongoose.model("Notification",NotificationSchema);

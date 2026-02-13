@@ -29,17 +29,20 @@ export const updateCustomerService=async(id,customerData)=>{
     return customer;
 };
 export const deleteCustomerService=async(id)=>{
-    const customer=await customer.findByIdAndDelete(id);
+    const customer=await Customer.findByIdAndDelete(id);
     if(!customer) {
         throw new Error('Customer not found');
     }
     return customer;
 };
 export const updateCustomerLocationService=async(id,longitude,latitude)=>{
+    if(!longitude || !latitude) {
+        throw new Error('Longitude and Latitude are required');
+    }
     const customer=await Customer.findByIdAndUpdate(id,{
         defaultLocation:{
-            type:"point",
-            coordinates:[longitude,latitude], // [longitude, latitude]
+            type:"Point",
+            coordinates:[Number(longitude), Number(latitude)], // [longitude, latitude]
         }
     },{new:true});
     if(!customer) {

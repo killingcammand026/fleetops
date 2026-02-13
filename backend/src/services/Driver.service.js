@@ -36,14 +36,18 @@ export const deleteDriverService = async (id) => {
     return driver;
 };
 export const updateDriverLocationService = async (id, longitude, latitude) => {
+    if (longitude === undefined || latitude === undefined) {
+  throw new Error("Longitude and Latitude are required");
+}
     const driver=await Driver.findByIdAndUpdate(id,{
         liveLocation:{
             type:"Point",
-            coordinates:[longitude, latitude], // [longitude, latitude]
+            coordinates:[Number(longitude), Number(latitude)], // [longitude, latitude]
         }
     },{new:true});
     if(!driver) {
         throw new Error('Driver not found');
     }
+  
     return driver;
 };

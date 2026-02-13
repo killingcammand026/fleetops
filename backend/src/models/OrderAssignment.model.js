@@ -20,4 +20,4 @@ const OrderAssignmentSchema = new mongoose.Schema({
     },
     reason:String, //optional reason for assignment or reassignment
 });
-module.exports = mongoose.model("OrderAssignment",OrderAssignmentSchema);
+export default mongoose.model("OrderAssignment",OrderAssignmentSchema);

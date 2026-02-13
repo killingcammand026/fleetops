@@ -4,7 +4,7 @@ import { createCustomerService,
     updateCustomerService,
     deleteCustomerService,
     updateCustomerLocationService,
- } from "../services/Customer.service";
+ } from "../services/Customer.service.js";
 
 export const createCustomerController=async(req,res)=>{
     try{
@@ -54,7 +54,7 @@ export const getCustomerByIdController=async(req,res)=>{
  export const updateCustomerLocationController=async(req,res)=>{
     try{
         const {longitude,latitude}=req.body;
-        const customer=await updateCustomerLocationService(req,params.id,longitude,latitude);
+        const customer=await updateCustomerLocationService(req.params.id,longitude,latitude);
         res.status(200).json(customer);
     }
     catch(error){
