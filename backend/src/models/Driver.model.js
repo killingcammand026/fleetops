@@ -39,7 +39,7 @@ const DriverSchema = new mongoose.Schema({
         },
         coordinates:{
             type:[Number], // [longitude, latitude]
-            index:"2dsphere"
+            required:true,
         },
     },
 
@@ -74,4 +74,4 @@ const DriverSchema = new mongoose.Schema({
 },{timestamps:true});
 // Geo index (explicit)
 DriverSchema.index({ liveLocation: "2dsphere" });
-module.exports = mongoose.model("Driver",DriverSchema);
+export default mongoose.model("Driver",DriverSchema);

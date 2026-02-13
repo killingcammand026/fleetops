@@ -16,6 +16,6 @@ router.get("/",getAllCustomersController);
 router.get("/:id",getCustomerByIdController);
 router.put("/:id",updateCustomerController);
 router.delete("/:id",deleteCustomerController);
-router.put("/:id",updateCustomerLocationController);
+router.patch("/:id",updateCustomerLocationController);
 
 export default router;

@@ -17,7 +17,7 @@ const CustomerSchema = new mongoose.Schema({
         },
         coordinates:{
             type:[Number], // [longitude, latitude]
-            index:"2dsphere"
+            required:true,
         }
     },
     paymentMethod:{
@@ -39,4 +39,4 @@ const CustomerSchema = new mongoose.Schema({
 },{timestamps:true});
 
 CustomerSchema.index({defaultLocation:"2dsphere"});
-module.exports = mongoose.model("Customer",CustomerSchema);
+export default mongoose.model("Customer",CustomerSchema);

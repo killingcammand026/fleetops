@@ -4,7 +4,7 @@ import { createDriverService,
     updateDriverService,
     deleteDriverService,
     updateDriverLocationService,
- } from "../services/Driver.service";
+ } from "../services/Driver.service.js";
 
  export const createDriverController = async (req, res) => {
     try {
@@ -49,13 +49,15 @@ import { createDriverService,
         res.status(200).json({ message: "Driver deleted successfully" });
     }
     catch (error) {
-        res.status(400).json({ error: error.message });
+        res.status(404).json({ error: error.message });
     }
     };
     export const updateDriverLocationController = async (req, res) => {
         try{
             const {longitude, latitude} = req.body;
             const driver=await updateDriverLocationService(req.params.id, longitude, latitude);
+            console.log("Incoming:", longitude, latitude);
+            console.log("Updated Driver:", driver.liveLocation);
             res.status(200).json(driver);
         }
         catch (error) {
