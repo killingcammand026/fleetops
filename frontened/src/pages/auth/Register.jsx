@@ -8,7 +8,7 @@ import * as z from"zod";
 import api from "../../lib/axios";
 
 
-import { startLoading,registerFailure,registerSuccess } from "../redux/authSlice";   
+import { startLoading,registerFailure,registerSuccess } from "../../redux/slices/authSlice";   
 
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";

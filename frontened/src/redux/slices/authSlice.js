@@ -59,8 +59,37 @@ const authSlice=createSlice({
                 state.isAuthenticated = false;
                 localStorage.removeItem("token");
         },
+
+        loginSuccess: (state, action) => {
+            const token = action.payload.token;
+            const decoded = jwtDecode(token);
+
+            state.loading = false;
+            state.token = token;
+            state.user = decoded;
+            state.role = decoded.role;
+            state.isAuthenticated = true;
+
+            localStorage.setItem("token", token);
+
+            if (action.payload.user.role === "driver") {
+         localStorage.setItem("driverId", action.payload.user._id);
+        }
+        },
+
+        loginFailure: (state, action) => {
+            state.loading = false;
+            state.error = action.payload;
+        },
     },
 });
 
-export const {startLoading,registerSuccess,registerFailure,logout,}=authSlice.actions;
+export const {
+  startLoading,
+  registerSuccess,
+  registerFailure,
+  loginSuccess,
+  loginFailure,
+  logout,
+} = authSlice.actions;
 export default authSlice.reducer;
