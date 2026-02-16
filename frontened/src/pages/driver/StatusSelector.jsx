@@ -2,7 +2,7 @@ import React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { updateDriverAPI } from "../../services/driverService";
 import { updateDriver } from "../../redux/slices/driverSlice";
-import { Select } from "../ui/select";
+import { Select } from "../../components/ui/select";
 
 const StatusSelector = () => {
   const dispatch = useDispatch();

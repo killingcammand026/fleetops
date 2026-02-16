@@ -8,12 +8,13 @@ import {
 
 import { getDriverByIdAPI } from "../../services/driverService";
 import DriverMap from "./DriverMap";
-import StatusSelector from "../../components/driver/StatusSelector";
-import LocationTracker from "../../components/driver/LocationTracker";
+import StatusSelector from "../driver/StatusSelector";
+import LocationTracker from "../driver/LocationTracker";
 
 const DriverDashboard=() => {
     const dispatch=useDispatch();
     const {currentDriver}=useSelector((state)=>state.driver
+    
 );
 
   const driverId = localStorage.getItem("driverId");
