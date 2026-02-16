@@ -2,6 +2,7 @@ import { combineReducers, configureStore } from "@reduxjs/toolkit";
 import authReducer from "./slices/authSlice";
 import driverReducer from "./slices/driverSlice";
 import customerReducer from "./slices/customerSlice";
+import userReducer from "./slices/userSlice";
 import { setupAxiosInterceptors } from "../lib/axios";
 import {
     persistStore,
@@ -25,19 +26,13 @@ const rootReducer = combineReducers({
     auth:authReducer,
     driver: driverReducer,
     customer: customerReducer,
+    user: userReducer,
 })
 
 
 const persistedReducer = persistReducer(persistConfig, rootReducer)
 
 
-//  const store = configureStore({
-//   reducer: {
-//     auth: authReducer,
-//     driver: driverReducer,
-//      customer: customerReducer,
-//   },
-// });
 
 
 const store = configureStore({

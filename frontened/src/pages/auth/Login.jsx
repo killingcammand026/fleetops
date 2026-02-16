@@ -55,9 +55,12 @@ const Login=()=>{
         if (role === "Customer") navigate("/customer/dashboard");
 
     } catch (err) {
-        dispatch(
-            loginFailure(err.response?.data?.message || "Login failed")
-      );
+        const message = err.response?.data?.message
+          ? err.response.data.message
+          : err.code === "ERR_NETWORK" || !err.response
+            ? "You are not resgistered yet, Please register first"
+            : "Login failed";
+        dispatch(loginFailure(message));
     }
   };
 

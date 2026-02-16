@@ -76,7 +76,7 @@ const authSlice=createSlice({
 
             localStorage.setItem("token", token);
 
-            if (action.payload.user.role === "driver") {
+            if (action.payload.user.role === "Driver") {
          localStorage.setItem("driverId", action.payload.user._id);
         }
         },

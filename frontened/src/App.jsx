@@ -4,18 +4,33 @@ import Login from "./pages/auth/Login"
 import Register from "./pages/auth/Register"
 import DriverDashboard from "./pages/driver/DriverDashboard"
 import CustomerDashboard from "./pages/customer/CustomerDashboard"
+import UsersPage from "./pages/admin/UsersPage";
 import ProtectedRoute from "./components/ProtectedRoute"
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+
+
         <Route path="/" element={<Login />} />
+
         <Route path="/login" element={<Login />} />
+
         <Route path="/register" element={<Register />} />
+
          <Route path="/driver/dashboard" element={<ProtectedRoute allowedRole="Driver"><DriverDashboard /></ProtectedRoute>} /> 
+
+
          <Route path="/customer/dashboard" element={<ProtectedRoute allowedRole="Customer"><CustomerDashboard /></ProtectedRoute>} /> 
+
+         <Route path="/admin/users" element={<ProtectedRoute allowedRole="Admin"><UsersPage  /></ProtectedRoute>} /> 
+
+
+
         <Route path="*" element={<Navigate to="/" replace />} />
+
+
       </Routes>
     </BrowserRouter>
   )
