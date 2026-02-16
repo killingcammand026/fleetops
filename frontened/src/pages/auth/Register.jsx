@@ -58,11 +58,13 @@ const Register = () => {
       if (role === "Driver") navigate("/driver/dashboard");
       if (role === "Customer") navigate("/customer/dashboard");
     } catch (err) {
-      dispatch(
-        registerFailure(
-          err.response?.data?.message || "Registration failed"
-        )
-      );
+      // No response = backend unreachable (not running or wrong URL)
+      const message = err.response?.data?.message
+        ? err.response.data.message
+        : err.code === "ERR_NETWORK" || !err.response
+          ? "Cannot connect to server. Make sure the backend is running at http://localhost:5000"
+          : "Registration failed";
+      dispatch(registerFailure(message));
     }
   };
 

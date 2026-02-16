@@ -1,17 +1,21 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { jwtDecode } from "jwt-decode";
-import { LogOut } from "lucide-react";
 
 
-const token=localStorage.getItem("token");
+const token = localStorage.getItem("token");
 
-let user=null;
-let role=null;
+let user = null;
+let role = null;
 
-if(token){
-    const decoded=jwtDecode(token);
-    user=decoded;
-    role=decoded.role;
+if (token) {
+  try {
+    const decoded = jwtDecode(token);
+    user = decoded;
+    role = decoded.role;
+  } catch {
+    // Invalid or expired token - clear it so app doesn't crash
+    localStorage.removeItem("token");
+  }
 }
 
 const initialState={
@@ -72,7 +76,7 @@ const authSlice=createSlice({
 
             localStorage.setItem("token", token);
 
-            if (action.payload.user.role === "driver") {
+            if (action.payload.user.role === "Driver") {
          localStorage.setItem("driverId", action.payload.user._id);
         }
         },
