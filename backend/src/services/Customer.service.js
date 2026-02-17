@@ -22,6 +22,9 @@ export const getCustomerByIdService=async(id)=>{
     return customer;
 };
 export const updateCustomerService=async(id,customerData)=>{
+    // Remove restricted fields
+    delete customerData.userId;
+    delete customerData._id;
     const customer=await Customer.findByIdAndUpdate(id,customerData,{new:true});
     if(!customer) {
         throw new Error('Customer not found');
