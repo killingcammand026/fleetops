@@ -81,7 +81,7 @@ import {
     export const assignDriverController=async(req,res)=>{
         try{
             
-            const order=await assignDriverService(req.params.id,req.user);
+            const order=await assignDriverService(req.params.id);
             res.status(200).json({
                 success:true,
                 message:"Driver Assigned",
