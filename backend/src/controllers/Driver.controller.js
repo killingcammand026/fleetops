@@ -8,7 +8,11 @@ import { createDriverService,
 
  export const createDriverController = async (req, res) => {
     try {
-        const driver = await createDriverService(req.body);
+         const driverData={
+                    ...req.body,
+                    fleetManagerId:req.user._id
+                }
+        const driver = await createDriverService(driverData,req.user);
         res.status(201).json(driver);
     }
     catch (error) {       
@@ -45,7 +49,7 @@ import { createDriverService,
     };
     export const deleteDriverController = async (req, res) => {
     try {
-        const driver = await deleteDriverService(req.params.id);
+        const driver = await deleteDriverService(req.params.id,req.user);
         res.status(200).json({ message: "Driver deleted successfully" });
     }
     catch (error) {

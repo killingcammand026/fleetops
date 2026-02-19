@@ -5,19 +5,28 @@ const CustomerSchema = new mongoose.Schema({
         ref:"User",
         required:true,
     },
-    address:{
+    name:{
         type:String,
         required:true,
+    },
+    address:{
+        type:String,
+        required:false,
+    },
+    phone:{
+        type:String,
+        required:false,
+        
     },
     defaultLocation:{
         type:{
             type:String,
             enum:["Point"],
-            default:"Point",
+            
         },
         coordinates:{
             type:[Number], // [longitude, latitude]
-            required:true,
+            required:false,
         }
     },
     paymentMethod:{

@@ -44,6 +44,7 @@ const orderSchema=new mongoose.Schema({
         type:String,
         enum:["CREATED",
         "DRIVER_ASSIGNED",
+        "DRIVER_ACCEPTED",
         "PICKED_UP",
         "IN_TRANSIT",
         "DELIVERED",
@@ -85,7 +86,20 @@ const orderSchema=new mongoose.Schema({
     //optional metadata
     notes:String,
 
-
+    rejectedDrivers:[
+        {
+            type:mongoose.Schema.Types.ObjectId,
+            ref:"Driver"
+        }
+    ],
+    retryCount:{
+        type:Number,
+        default:0
+    },
+    maxRetries:{
+        type:Number,
+        default:3
+    },
 },{timestamps:true});
 
 orderSchema.index({pickupLocation:"2dsphere"});

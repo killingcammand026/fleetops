@@ -1,11 +1,18 @@
 import mongoose from "mongoose";
 
 const DriverSchema = new mongoose.Schema({
+
     userId:{
         type:mongoose.Schema.Types.ObjectId,
         ref:"User",
         required:true,
         unique:true
+    },
+    fleetManagerId:{
+        type:mongoose.Schema.Types.ObjectId,
+        ref:"User",//role must be fleet manager
+        required:true,
+        index:true,
     },
     //driver personal info
     name:{
@@ -28,6 +35,7 @@ const DriverSchema = new mongoose.Schema({
             type:String,
             required:true,
             unique:true,
+            
         },
         capacityKg:Number,
     },
@@ -54,6 +62,10 @@ const DriverSchema = new mongoose.Schema({
     isVerified:{
         type:Boolean,
         default:false   
+    },
+    isAvailable:{
+        type:Boolean,
+        default:true
     },
     licenceNumber:String,
     licenceExpiryDate:Date,
