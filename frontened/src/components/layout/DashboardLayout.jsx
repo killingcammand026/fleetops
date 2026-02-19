@@ -5,11 +5,11 @@ const DashboardLayout = ({ children }) => {
   const { role } = useSelector((state) => state.auth);
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
+    <div className="flex min-h-screen bg-gray-50">
       <Sidebar role={role} />
-      <div style={{ flex: 1, padding: "20px" }}>
+      <main className="flex-1 overflow-auto">
         {children}
-      </div>
+      </main>
     </div>
   );
 };

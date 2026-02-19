@@ -44,19 +44,21 @@ const Register = () => {
       dispatch(startLoading());
 
       const response = await api.post("/auth/register", data);
-
       dispatch(registerSuccess(response.data));
 
-      // ✅ Navigate to single dashboard
-      navigate("/dashboard");
-
+      const role = response.data.role || response.data.user?.role;
+      if (role === "Admin") navigate("/admin/users");
+      else if (role === "Driver") navigate("/driver/dashboard");
+      else if (role === "FleetManager") navigate("/fleet/users");
+      else if (role === "Customer") navigate("/customer/dashboard");
+      else navigate("/");
     } catch (err) {
-      const message = err.response?.data?.message
-        ? err.response.data.message
-        : err.code === "ERR_NETWORK" || !err.response
-        ? "Cannot connect to server. Make sure the backend is running at http://localhost:5000"
-        : "Registration failed";
-
+      const message =
+        err.response?.data?.message ||
+        (err.code === "ERR_NETWORK" || err.message === "Network Error"
+          ? "Registration failed"
+          : err.message) ||
+        "Registration failed";
       dispatch(registerFailure(message));
     }
   };

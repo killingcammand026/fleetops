@@ -22,11 +22,16 @@ const persistConfig = {
 }
 
 
+import orderReducer from "./slices/orderSlice";
+import assignmentReducer from "./slices/assignmentSlice";
+
 const rootReducer = combineReducers({
     auth:authReducer,
     driver: driverReducer,
     customer: customerReducer,
     user: userReducer,
+    order: orderReducer,
+    assignment: assignmentReducer,
 })
 
 
