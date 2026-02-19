@@ -56,10 +56,10 @@ export const createFleetManagerService=async(userData)=>{
         throw new Error('Email already exists');
     }
    
-  // 2️⃣ Remove role from incoming data (security)
+  // Remove role from incoming data (security)
   const { name, email, password } = userData;
 
-  // 3️⃣ Create user with forced role
+  // Create user with forced role
   const user = await User.create({
     name,
     email,

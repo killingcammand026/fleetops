@@ -6,7 +6,10 @@ import {
     deleteOrderService,
     updateOrderStatusService,
     assignDriverService,
-    cancelOrderService
+    cancelOrderService,
+    driverAcceptOrderService,
+    driverRejectOrderService
+
 
 } from '../services/Order.service.js';
 
@@ -77,8 +80,8 @@ import {
     };
     export const assignDriverController=async(req,res)=>{
         try{
-            const {driverId}=req.body;
-            const order=await assignDriverService(req.params.id,driverId,req.user);
+            
+            const order=await assignDriverService(req.params.id,req.user);
             res.status(200).json({
                 success:true,
                 message:"Driver Assigned",
@@ -103,4 +106,27 @@ import {
             res.status(400).json({message:error.message});
         }
     };
-
+    export const driverAcceptOrderController=async(req,res)=>{
+        try{
+            const order=await driverAcceptOrderService(req.params.id,req.user);
+            res.status(200).json({
+                message:"Driver Accepted the order",
+                data:order
+            })
+        }
+        catch(error){
+            res.status(400).json({message:error.message});
+        }
+    };
+    export const driverRejectOrderController=async(req,res)=>{
+        try{
+            const order=await driverRejectOrderService(req.params.id,req.user);
+            res.status(200).json({
+                message:"Driver Rejected the order",
+                data:order
+            })
+        }
+        catch(error){
+            res.status(400).json({message:error.message});
+        }
+    };

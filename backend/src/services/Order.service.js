@@ -2,6 +2,9 @@ import Order from '../models/Order.model.js';
 import Customer from "../models/Customer.model.js"
 import Driver from "../models/Driver.model.js"
 import dotenv from "dotenv"
+import {getIO} from "../sockets/index.socket.js"
+// import { setTimeout } from 'timers/promises';
+import mongoose from 'mongoose';
 dotenv.config();
 import {    
     orderIdHelper,
@@ -42,16 +45,16 @@ const dropLon = Number(dropLongitude);
     );
     const estimateFare=calculateFareHelper(distanceKm);
     const orderId=orderIdHelper();
-    console.log({
-  pickupLat,
-  pickupLon,
-  dropLat,
-  dropLon,
-  distanceKm,
-  estimateFare,
-  BASE_FARE: process.env.BASE_FARE,
-  PER_KM_RATE: process.env.PER_KM_RATE
-});
+//     console.log({
+//   pickupLat,
+//   pickupLon,
+//   dropLat,
+//   dropLon,
+//   distanceKm,
+//   estimateFare,
+//   BASE_FARE: process.env.BASE_FARE,
+//   PER_KM_RATE: process.env.PER_KM_RATE
+// });
     const order=await Order.create({
         orderId,
         customer:customer._id,
@@ -168,7 +171,8 @@ export const updateOrderStatusService = async (
   //STATUS TRANSITION CONTROL
   const allowedTransitions = {
     CREATED: ["DRIVER_ASSIGNED", "CANCELLED"],
-    DRIVER_ASSIGNED: ["PICKED_UP", "CANCELLED"],
+    DRIVER_ASSIGNED: ["DRIVER_ACCEPTED", "CANCELLED"],
+    DRIVER_ACCEPTED:["PICKED_UP","CANCELLED"],
     PICKED_UP: ["IN_TRANSIT"],
     IN_TRANSIT: ["DELIVERED"],
     DELIVERED: [],
@@ -194,6 +198,7 @@ export const updateOrderStatusService = async (
     if (!order.driver) {
       throw new Error("Driver must be assigned before changing status");
     }
+
   }
 
   //PICKED_UP / IN_TRANSIT / DELIVERED → Only assigned driver
@@ -236,7 +241,16 @@ export const updateOrderStatusService = async (
 
   //UPDATE STATUS
   order.status = newStatus;
-
+  if(newStatus==="DRIVER_ASSIGNED"){
+    await Driver.findByIdAndUpdate(order.driver,{
+        isAvailable:false
+    });
+  }
+  if(newStatus==="DELIVERED"||newStatus==="CANCELLED"){
+    await Driver.findByIdAndUpdate(order.driver,{
+        isAvailable:true
+    });
+  }
   if (newStatus === "PICKED_UP") {
     order.pickedUpAt = new Date();
   }
@@ -247,23 +261,125 @@ export const updateOrderStatusService = async (
 
   await order.save();
 
+  //emit status update to order room
+  const io=getIO();
+  io.to(`order_${order._id}`.emit("statusUpdated",{
+    orderId:order._id,
+    status:order.status
+  }));
+
   return order;
 };
-export const assignDriverService =async(orderId,driverId,loggedInUser)=>{
-    const order=await Order.findById(orderId);
+export const assignDriverService =async(orderId,loggedInUser,excludedDriversIds=[])=>{
+
+    const session=await mongoose.startSession();
+    session.startTransaction();
+    try{
+    const io=getIO();
+    let order=await Order.findById(orderId).session(session);
     if(!order){
         throw new Error("Order not found");
     }
     if(order.status!=="CREATED"){
         throw new Error("Driver can be assigned only to Created order status");
     }
-        order.driver=driverId;
+    if(order.retryCount>=order.maxRetries){
+        order.status="CANCELLED";
+        await order.save({session});
+
        
-        await order.save();
-        return await updateOrderStatusService(orderId,"DRIVER_ASSIGNED",loggedInUser);
+        await session.commitTransaction();
+        session.endSession();
+
+        // const io=getIO();
+        io.to(`order_${orderId}`).emit("orderCancelled",{
+            orderId:order._id,
+            reason:"No drivers accepted the order"
+        });
+
+        return order;
+    }
+
+        //find nearest avialable driver
+        const nearestDriver=await Driver.findOne({
+            _id:{$nin:excludedDriversIds},
+            isAvailable:true,
+            liveLocation:{
+                $near:{
+                    $geometry:{
+                        type:"Point",
+                        coordinates:order.pickupLocation.coordinates
+                    },
+                    $maxDistance:process.env.maxDistance //5km radius
+                }
+            }
+        }).session(session);
+
+        if(!nearestDriver){
+             order.status = "CANCELLED";
+             await order.save({session});
+
+             await session.commitTransaction();
+             session.endSession();
+
+            //  const io = getIO();
+             io.to(`order_${orderId}`).emit("orderCancelled", {
+                orderId: order._id,
+                reason: "No available drivers nearby"
+             });
+           return order;
+        }
+        order.retryCount+=1;
+        order.driver=nearestDriver._id;
+        order.status="DRIVER_ASSIGNED";
+        
+        nearestDriver.isAvailable=false;
+        
+        
+        await order.save({session});
+        await nearestDriver.save({session});
+
+        await session.commitTransaction();
+        await session.endSession();
+
+        // const io=getIO();
+        io.to(`order_${orderId}`).emit("driverAssigned",{
+            orderId:order._id,
+            driverId:nearestDriver._id
+        });
+        setTimeout(async ()=>{
+            const freshOrder=await Order.findById(orderId);
+            if(!freshOrder){
+                return;
+            }
+
+            if(freshOrder.status==="DRIVER_ASSIGNED"){
+                const previousDriverId=freshOrder.driver;
+                if(previousDriverId){
+                    const driver=await Driver.findById(previousDriverId);
+                    if(driver){
+                        driver.isAvailable=true;
+                        await driver.save();
+                    }
+                    freshOrder.driver=null;
+                    freshOrder.status="CREATED";
+                    await freshOrder.save();
+    
+                    await assignDriverService(orderId,loggedInUser,[previousDriverId]);
+                }
+            
+           }
+        },300000);
+    return order;
+    }
+    catch(error){
+        await session.abortTransaction();
+        session.endSession();
+        throw error;
+    }
 };
 export const cancelOrderService =async(orderId,loggedInUser)=>{
-    const order=await Order.findById(orderId);
+    let order=await Order.findById(orderId);
     if(!order){
         throw new Error("Order not found");
     }
@@ -280,10 +396,60 @@ export const cancelOrderService =async(orderId,loggedInUser)=>{
     order.driver=null;
     await order.save();
 
-    return await updateOrderStatusService(
-        orderId,
-        "CANCELLED",
-        loggedInUser
-    );
+    order.status="CANCELLED";
+    await order.save();
+        const io=getIO();
+        io.to(`order_${orderId}`).emit("orderCancelled",{
+            orderId:order._id
+        });
+        return order;
+};
+export const driverAcceptOrderService=async(orderId,loggedInUser)=>{
+    const order=await Order.findById(orderId);
+    if(!order){
+        throw new Error("Order Not Found");
+    }
+    const driver=await Driver.findById(order.driver);
+    if(!driver){
+        throw new Error("Driver not found"); 
+    }
+    if(driver.userId.toString()!==loggedInUser._id.toString()){
+        throw new Error("Not your Assigned Order");
+
+    }
+    if(order.status!=="DRIVER_ASSIGNED"){
+        throw new Error("Order not in Assigned State")
+    }
+
+
+    order.status="DRIVER_ACCEPTED";
+    await order.save();
+    return order;
+
+};
+export const driverRejectOrderService=async(orderId,loggedInUser)=>{
+    const order=await Order.findById(orderId);
+    if(!order){
+        throw new Error("Order Not Found");
+    }
+    const driver=await Driver.findById(order.driver);
+    if(!driver){
+        throw new Error("Driver not found"); 
+    }
+    if(driver.userId.toString()!==loggedInUser._id.toString()){
+        throw new Error("Not your Assigned Order");
+
+    }
+    if(order.status!=="DRIVER_ASSIGNED"){
+        throw new Error("Order not in Assigned State")
+    }
+     driver.isAvailable = true;
+     await driver.save();
+
+    order.driver=null;
+    order.status="CREATED";
+    await order.save();
+
+    return await assignDriverService(orderId,loggedInUser,[driver._id]);
 
 };

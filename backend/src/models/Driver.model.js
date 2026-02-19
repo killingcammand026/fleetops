@@ -63,6 +63,10 @@ const DriverSchema = new mongoose.Schema({
         type:Boolean,
         default:false   
     },
+    isAvailable:{
+        type:Boolean,
+        default:true
+    },
     licenceNumber:String,
     licenceExpiryDate:Date,
 

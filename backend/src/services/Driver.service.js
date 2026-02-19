@@ -32,8 +32,8 @@ export const createDriverService = async (driverData, loggedInUser) => {
     throw new Error("You are not allowed to create driver profiles");
   }
 
-  await user.save();
   const driver = await Driver.create(driverData);
+  await user.save();
 
   return driver;
 };
