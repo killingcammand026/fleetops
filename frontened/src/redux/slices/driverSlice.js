@@ -21,6 +21,11 @@ const driverSlice=createSlice({
       state.drivers = action.payload;
     },
 
+    addDriver: (state, action) => {
+      state.drivers.push(action.payload);
+      state.loading = false;
+    },
+
     setCurrentDriver: (state, action) => {
       state.currentDriver = action.payload;
        state.loading = false;
@@ -52,6 +57,7 @@ const driverSlice=createSlice({
 export const {
   startLoading,
   setDrivers,
+  addDriver,
   setCurrentDriver,
   updateDriver,
   deleteDriverFromState,

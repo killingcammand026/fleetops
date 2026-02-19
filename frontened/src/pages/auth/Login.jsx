@@ -39,29 +39,29 @@ const Login=()=>{
     });    
 
 
-    const onSubmit=async(data)=>{
-        try{
-            dispatch(startLoading());   
-            const response=await api.post("/auth/login",data);
-  
-             dispatch(loginSuccess(response.data));
+    const onSubmit = async (data) => {
+      try {
+        dispatch(startLoading());
 
-     const role = response.data.user.role;
+        const response = await api.post("/auth/login", data);
+        dispatch(loginSuccess(response.data));
 
+        const role = response.data.user?.role || response.data.role;
 
-        if (role === "Admin") navigate("/admin/dashboard");
+        if (role === "Admin") navigate("/admin/users");
         if (role === "Driver") navigate("/driver/dashboard");
+        if (role === "FleetManager") navigate("/fleet/users");
         if (role === "Customer") navigate("/customer/dashboard");
-
-    } catch (err) {
-        const message = err.response?.data?.message
-          ? err.response.data.message
-          : err.code === "ERR_NETWORK" || !err.response
-            ? "You are not resgistered yet, Please register first"
-            : "Login failed";
+      } catch (err) {
+        const message =
+          err.response?.data?.message ||
+          (err.code === "ERR_NETWORK" || err.message === "Network Error"
+            ? "Login failed"
+            : err.message) ||
+          "Login failed";
         dispatch(loginFailure(message));
-    }
-  };
+      }
+    };
 
 
  return (

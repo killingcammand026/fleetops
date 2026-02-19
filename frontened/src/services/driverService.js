@@ -1,29 +1,33 @@
 import api from "../lib/axios";
 
-const BASE="/drivers";
+const BASE = "/drivers";
 
-export const createDriverAPI = (data) =>
-  api.post(BASE, data);
+export const createDriverAPI = async (data) => {
+  const res = await api.post(BASE, data);
+  return res;
+};
 
+export const getAllDriversAPI = async () => {
+  const res = await api.get(BASE);
+  return res;
+};
 
-export const getAllDriversAPI = () =>
-  api.get(BASE);
+export const getDriverByIdAPI = async (id) => {
+  const res = await api.get(`${BASE}/${id}`);
+  return res;
+};
 
+export const updateDriverAPI = async (id, data) => {
+  const res = await api.put(`${BASE}/${id}`, data);
+  return res;
+};
 
-export const getDriverByIdAPI = (id) =>
-  api.get(`${BASE}/${id}`);
+export const deleteDriverAPI = async (id) => {
+  const res = await api.delete(`${BASE}/${id}`);
+  return res;
+};
 
-
-export const updateDriverAPI = (id, data) =>
-  api.put(`${BASE}/${id}`, data);
-
-
-export const deleteDriverAPI = (id) =>
-  api.delete(`${BASE}/${id}`);
-
-
-export const updateDriverLocationAPI = (id, longitude, latitude) =>
-  api.patch(`${BASE}/${id}`, {
-    longitude,
-    latitude,
-  });
+export const updateDriverLocationAPI = async (id, longitude, latitude) => {
+  const res = await api.patch(`${BASE}/${id}`, { longitude, latitude });
+  return res;
+};

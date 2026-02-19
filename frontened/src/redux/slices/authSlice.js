@@ -40,10 +40,28 @@ const authSlice=createSlice({
         },
 
         registerSuccess:(state,action)=>{
+            const token = action.payload.token;
+            let decoded;
+            
+            try {
+                decoded = jwtDecode(token);
+            } catch (err) {
+                // If token decode fails, use the user data from response
+                decoded = action.payload.user || action.payload;
+            }
 
-            state.loading=false;
-            state.error=null;
+            state.loading = false;
+            state.error = null;
+            state.token = token;
+            state.user = decoded;
+            state.role = decoded.role || action.payload.role;
+            state.isAuthenticated = true;
 
+            localStorage.setItem("token", token);
+
+            if (decoded.role === "Driver" || action.payload.role === "Driver") {
+                localStorage.setItem("driverId", decoded._id || action.payload.user?._id);
+            }
         },
 
         registerFailure:(state,action)=>{
@@ -63,19 +81,26 @@ const authSlice=createSlice({
 
         loginSuccess: (state, action) => {
             const token = action.payload.token;
-            const decoded = jwtDecode(token);
+            let decoded;
+            
+            try {
+                decoded = jwtDecode(token);
+            } catch (err) {
+                // If token decode fails, use the user data from response
+                decoded = action.payload.user || action.payload;
+            }
 
             state.loading = false;
             state.token = token;
             state.user = decoded;
-            state.role = decoded.role;
+            state.role = decoded.role || action.payload.role;
             state.isAuthenticated = true;
 
             localStorage.setItem("token", token);
 
-            if (decoded.role === "Driver") {
-         localStorage.setItem("driverId", decoded._id);
-        }
+            if (decoded.role === "Driver" || action.payload.role === "Driver") {
+                localStorage.setItem("driverId", decoded._id || action.payload.user?._id);
+            }
         },
 
         loginFailure: (state, action) => {

@@ -1,0 +1,174 @@
+// Fleet Map - Shows all active drivers on a map
+import React, { useEffect, useState } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { getAllDriversAPI } from "../../services/driverService";
+import { setDrivers } from "../../redux/slices/driverSlice";
+import { GoogleMap, Marker, useLoadScript, InfoWindow } from "@react-google-maps/api";
+
+const FleetMap = () => {
+  const dispatch = useDispatch();
+  const { drivers } = useSelector((state) => state.driver);
+  const { orders } = useSelector((state) => state.order);
+  const [selectedDriver, setSelectedDriver] = useState(null);
+  const [center, setCenter] = useState({ lat: 28.6139, lng: 77.2090 }); // Delhi center
+
+  const { isLoaded } = useLoadScript({
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_KEY || "",
+  });
+
+  useEffect(() => {
+    const fetchDrivers = async () => {
+      try {
+        const result = await getAllDriversAPI();
+        if (result?.data) {
+          dispatch(setDrivers(result.data));
+        }
+      } catch (err) {
+        console.error("Failed to fetch drivers:", err);
+      }
+    };
+
+    fetchDrivers();
+    // Refresh driver locations every 5 seconds
+    const interval = setInterval(fetchDrivers, 5000);
+    return () => clearInterval(interval);
+  }, [dispatch]);
+
+  // Get status color
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "available":
+        return "green";
+      case "on-route":
+        return "blue";
+      case "busy":
+        return "orange";
+      case "offline":
+        return "gray";
+      default:
+        return "red";
+    }
+  };
+
+  // Get driver's assigned order
+  const getDriverOrder = (driverId) => {
+    return orders.find((o) => o.assignedDriverId === driverId);
+  };
+
+  if (!isLoaded && import.meta.env.VITE_GOOGLE_MAPS_KEY) {
+    return (
+      <div className="p-4 border rounded-lg">
+        <p className="text-gray-600">Loading Map...</p>
+        <p className="text-sm text-gray-500 mt-2">
+          {drivers.length} active drivers
+        </p>
+      </div>
+    );
+  }
+
+  // Fallback if no Google Maps API key
+  if (!import.meta.env.VITE_GOOGLE_MAPS_KEY) {
+    return (
+      <div className="p-4 border rounded-lg bg-gray-50">
+        <h3 className="font-semibold mb-4">Active Drivers ({drivers.length})</h3>
+        <div className="space-y-2">
+          {drivers.map((driver) => {
+            const order = getDriverOrder(driver._id);
+            return (
+              <div
+                key={driver._id}
+                className="p-3 border rounded bg-white"
+              >
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="font-medium">{driver.name}</p>
+                    <p className="text-sm text-gray-600">
+                      {driver.vehicle?.type} - {driver.vehicle?.plate}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Status: <span className={`font-semibold text-${getStatusColor(driver.status)}-600`}>
+                        {driver.status}
+                      </span>
+                    </p>
+                    {order && (
+                      <p className="text-xs text-blue-600 mt-1">
+                        Order: {order.customerName} → {order.deliveryAddress}
+                      </p>
+                    )}
+                  </div>
+                  {driver.location && (
+                    <div className="text-xs text-gray-500">
+                      <p>📍 {driver.location.lat.toFixed(4)}, {driver.location.lng.toFixed(4)}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {drivers.length === 0 && (
+          <p className="text-gray-500 text-center py-4">No active drivers</p>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 border rounded-lg">
+      <h3 className="font-semibold mb-4">
+        Live Fleet Map ({drivers.filter((d) => d.status !== "offline").length} active)
+      </h3>
+      <GoogleMap
+        center={center}
+        zoom={12}
+        mapContainerStyle={{ width: "100%", height: "500px", borderRadius: "8px" }}
+      >
+        {drivers
+          .filter((driver) => driver.location && driver.status !== "offline")
+          .map((driver) => {
+            const order = getDriverOrder(driver._id);
+            return (
+              <Marker
+                key={driver._id}
+                position={{ lat: driver.location.lat, lng: driver.location.lng }}
+                icon={{
+                  path: window.google?.maps?.SymbolPath?.CIRCLE || "",
+                  scale: 8,
+                  fillColor: getStatusColor(driver.status),
+                  fillOpacity: 1,
+                  strokeColor: "#fff",
+                  strokeWeight: 2,
+                }}
+                onClick={() => setSelectedDriver(driver)}
+              >
+                {selectedDriver?._id === driver._id && (
+                  <InfoWindow
+                    position={{ lat: driver.location.lat, lng: driver.location.lng }}
+                    onCloseClick={() => setSelectedDriver(null)}
+                  >
+                    <div className="p-2">
+                      <p className="font-semibold">{driver.name}</p>
+                      <p className="text-sm">{driver.vehicle?.type} - {driver.vehicle?.plate}</p>
+                      <p className="text-xs">Status: {driver.status}</p>
+                      {order && (
+                        <>
+                          <p className="text-xs mt-1 text-blue-600">
+                            Order: {order.customerName}
+                          </p>
+                          <p className="text-xs text-gray-600">
+                            To: {order.deliveryAddress}
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  </InfoWindow>
+                )}
+              </Marker>
+            );
+          })}
+      </GoogleMap>
+    </div>
+  );
+};
+
+export default FleetMap;
