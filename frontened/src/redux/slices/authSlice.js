@@ -6,14 +6,15 @@ const token = localStorage.getItem("token");
 
 let user = null;
 let role = null;
+let isAuthenticated = false;
 
 if (token) {
   try {
     const decoded = jwtDecode(token);
     user = decoded;
     role = decoded.role;
+    isAuthenticated = true;
   } catch {
-    // Invalid or expired token - clear it so app doesn't crash
     localStorage.removeItem("token");
   }
 }
@@ -22,7 +23,7 @@ const initialState={
     user,
     role,
     token,
-    isAuthenticated: !!token,
+    isAuthenticated,
     loading:false,
     error:null,
 };
@@ -39,16 +40,10 @@ const authSlice=createSlice({
         },
 
         registerSuccess:(state,action)=>{
-            const token=action.payload.token;
-            const decoded=jwtDecode(token);
 
             state.loading=false;
-            state.token=token;
-            state.user=decoded;
-            state.role=decoded.role;
-            state.isAuthenticated=true;
+            state.error=null;
 
-            localStorage.setItem("token",token);
         },
 
         registerFailure:(state,action)=>{
@@ -62,6 +57,8 @@ const authSlice=createSlice({
                 state.token = null;
                 state.isAuthenticated = false;
                 localStorage.removeItem("token");
+                localStorage.removeItem("driverId");
+                
         },
 
         loginSuccess: (state, action) => {
@@ -76,8 +73,8 @@ const authSlice=createSlice({
 
             localStorage.setItem("token", token);
 
-            if (action.payload.user.role === "Driver") {
-         localStorage.setItem("driverId", action.payload.user._id);
+            if (decoded.role === "Driver") {
+         localStorage.setItem("driverId", decoded._id);
         }
         },
 
