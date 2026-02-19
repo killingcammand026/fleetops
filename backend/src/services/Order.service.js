@@ -11,6 +11,7 @@ import {
     calculateDistanceHelper,
     calculateFareHelper
 } from "../utils/Order.utils.js"
+import { orderQueue } from '../queues/order.queue.js';
 export const createOrderService=async(orderData,loggedInUser)=>{
     
     // console.log(process.env.BASE_FARE);
@@ -270,114 +271,105 @@ export const updateOrderStatusService = async (
 
   return order;
 };
-export const assignDriverService =async(orderId,loggedInUser,excludedDriversIds=[])=>{
+export const assignDriverService = async (orderId) => {
 
-    const session=await mongoose.startSession();
+    const session = await mongoose.startSession();
     session.startTransaction();
-    try{
-    const io=getIO();
-    let order=await Order.findById(orderId).session(session);
-    if(!order){
-        throw new Error("Order not found");
-    }
-    if(order.status!=="CREATED"){
-        throw new Error("Driver can be assigned only to Created order status");
-    }
-    if(order.retryCount>=order.maxRetries){
-        order.status="CANCELLED";
-        await order.save({session});
 
-       
-        await session.commitTransaction();
-        session.endSession();
+    try {
+        const io = getIO();
 
-        // const io=getIO();
-        io.to(`order_${orderId}`).emit("orderCancelled",{
-            orderId:order._id,
-            reason:"No drivers accepted the order"
-        });
+        let order = await Order.findById(orderId).session(session);
 
-        return order;
-    }
+        if (!order) throw new Error("Order not found");
 
-        //find nearest avialable driver
-        const nearestDriver=await Driver.findOne({
-            _id:{$nin:excludedDriversIds},
-            isAvailable:true,
-            liveLocation:{
-                $near:{
-                    $geometry:{
-                        type:"Point",
-                        coordinates:order.pickupLocation.coordinates
+        if (!["CREATED", "DRIVER_ASSIGNED"].includes(order.status))
+            throw new Error("Driver can be assigned only to CREATED order");
+
+        // ✅ FIXED CONDITION
+        if (order.retryCount >= order.maxRetries) {
+            order.status = "CANCELLED";
+            await order.save({ session });
+
+            await session.commitTransaction();
+            session.endSession();
+
+            io.to(`order_${orderId}`).emit("orderCancelled", {
+                orderId: order._id,
+                reason: "No drivers accepted the order"
+            });
+
+            return order;
+        }
+
+        const nearestDriver = await Driver.findOne({
+            _id: { $nin: order.rejectedDrivers },
+            isAvailable: true,
+            liveLocation: {
+                $near: {
+                    $geometry: {
+                        type: "Point",
+                        coordinates: order.pickupLocation.coordinates
                     },
-                    $maxDistance:process.env.maxDistance //5km radius
+                    $maxDistance: Number(process.env.maxDistance)
                 }
             }
         }).session(session);
 
-        if(!nearestDriver){
-             order.status = "CANCELLED";
-             await order.save({session});
+        if (!nearestDriver) {
+            order.status = "CANCELLED";
+            await order.save({ session });
 
-             await session.commitTransaction();
-             session.endSession();
+            await session.commitTransaction();
+            session.endSession();
 
-            //  const io = getIO();
-             io.to(`order_${orderId}`).emit("orderCancelled", {
+            io.to(`order_${orderId}`).emit("orderCancelled", {
                 orderId: order._id,
                 reason: "No available drivers nearby"
-             });
-           return order;
+            });
+
+            return order;
         }
-        order.retryCount+=1;
-        order.driver=nearestDriver._id;
-        order.status="DRIVER_ASSIGNED";
-        
-        nearestDriver.isAvailable=false;
-        
-        
-        await order.save({session});
-        await nearestDriver.save({session});
+
+        // ✅ increment AFTER validation
+        order.retryCount += 1;
+        order.driver = nearestDriver._id;
+        order.status = "DRIVER_ASSIGNED";
+
+        nearestDriver.isAvailable = false;
+
+        await order.save({ session });
+        await nearestDriver.save({ session });
 
         await session.commitTransaction();
-        await session.endSession();
+        session.endSession();
 
-        // const io=getIO();
-        io.to(`order_${orderId}`).emit("driverAssigned",{
-            orderId:order._id,
-            driverId:nearestDriver._id
+        io.to(`order_${orderId}`).emit("driverAssigned", {
+            orderId: order._id,
+            driverId: nearestDriver._id
         });
-        setTimeout(async ()=>{
-            const freshOrder=await Order.findById(orderId);
-            if(!freshOrder){
-                return;
-            }
 
-            if(freshOrder.status==="DRIVER_ASSIGNED"){
-                const previousDriverId=freshOrder.driver;
-                if(previousDriverId){
-                    const driver=await Driver.findById(previousDriverId);
-                    if(driver){
-                        driver.isAvailable=true;
-                        await driver.save();
-                    }
-                    freshOrder.driver=null;
-                    freshOrder.status="CREATED";
-                    await freshOrder.save();
-    
-                    await assignDriverService(orderId,loggedInUser,[previousDriverId]);
-                }
-            
-           }
-        },300000);
-    return order;
-    }
-    catch(error){
+        // ✅ schedule timeout again
+        await orderQueue.add(
+            "order-timeout",
+            {
+                orderId,
+                previousDriverId: nearestDriver._id
+            },
+            {
+                delay: 5000
+            }
+        );
+
+        return order;
+
+    } catch (error) {
         await session.abortTransaction();
         session.endSession();
         throw error;
     }
 };
+
 export const cancelOrderService =async(orderId,loggedInUser)=>{
     let order=await Order.findById(orderId);
     if(!order){

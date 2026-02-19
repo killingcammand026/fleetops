@@ -9,15 +9,17 @@ import authRoutes from './routes/Auth.routes.js'
 import http from "http"
 import { Server } from 'socket.io'
 import initializeSocket from "./sockets/index.socket.js"
+import "./workers/Order.worker.js"
 dotenv.config()
 
 const app = express()
+const server=http.createServer(app);
 const port = 3000
 
 
 //middleware to parse JSON requests
 app.use(express.json());
-const server=http.createServer(app);
+
 
 initializeSocket(server);
 
@@ -32,11 +34,12 @@ app.get('/', (req, res) => {
   res.send('FleetOps Backend Running 🚀')
 })
 
-app.listen(port, async () => {
+// app.listen(port, async () => {
+//   await connectDB();
+//   console.log(`Example app listening on port ${port}`)
+// })
+server.listen(3000,async()=>{
   await connectDB();
-  console.log(`Example app listening on port ${port}`)
-})
-server.listen(5000,()=>{
   console.log("Server Running on port 5000");
 });
 
