@@ -4,7 +4,8 @@ import Login from "./pages/auth/Login"
 import Register from "./pages/auth/Register"
 import DriverDashboard from "./pages/driver/DriverDashboard"
 import CustomerDashboard from "./pages/customer/CustomerDashboard"
-import UsersPage from "./pages/admin/UsersPage";
+import AdminDashboard from "./pages/admin/AdminDashboard"
+import FleetDashboard from "./pages/fleet/FleetDashboard"
 import ProtectedRoute from "./components/ProtectedRoute"
 
 function App() {
@@ -21,10 +22,13 @@ function App() {
 
          <Route path="/driver/dashboard" element={<ProtectedRoute allowedRole="Driver"><DriverDashboard /></ProtectedRoute>} /> 
 
+  
 
          <Route path="/customer/dashboard" element={<ProtectedRoute allowedRole="Customer"><CustomerDashboard /></ProtectedRoute>} /> 
 
-         <Route path="/admin/users" element={<ProtectedRoute allowedRole="Admin"><UsersPage  /></ProtectedRoute>} /> 
+         <Route path="/admin/users" element={<ProtectedRoute allowedRole="Admin"><AdminDashboard   /></ProtectedRoute>} /> 
+
+         <Route path="/fleet/users" element={<ProtectedRoute allowedRole="FleetManager"><FleetDashboard    /></ProtectedRoute>} /> 
 
 
 
