@@ -32,7 +32,7 @@ const userSlice=createSlice({
       );
 
       state.fleetManagers = action.payload.filter(
-        (user) => user.role === "FleetManager"
+        (user) => user.role === "Fleet Manager"
       );
 
       state.admins = action.payload.filter(
@@ -54,7 +54,7 @@ const userSlice=createSlice({
         state.drivers.push(action.payload);
       }
 
-      if (action.payload.role === "FleetManager") {
+      if (action.payload.role === "Fleet Manager") {
         state.fleetManagers.push(action.payload);
       }
 
@@ -75,7 +75,7 @@ const userSlice=createSlice({
       
       state.drivers = state.users.filter((u) => u.role === "Driver");
       state.fleetManagers = state.users.filter(
-        (u) => u.role === "FleetManager"
+        (u) => u.role === "Fleet Manager"
       );
       state.admins = state.users.filter((u) => u.role === "Admin");
     },
@@ -88,7 +88,7 @@ const userSlice=createSlice({
 
       state.drivers = state.users.filter((u) => u.role === "Driver");
       state.fleetManagers = state.users.filter(
-        (u) => u.role === "FleetManager"
+        (u) => u.role === "Fleet Manager"
       );
       state.admins = state.users.filter((u) => u.role === "Admin");
     },

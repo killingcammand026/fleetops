@@ -3,13 +3,8 @@ import { logout } from "../redux/slices/authSlice";
 
 // Create Axios instance
 const api = axios.create({
-<<<<<<< HEAD
   baseURL: "http://localhost:5000/api", // change to your backend URL
   withCredentials: true, // if using cookies
-=======
-  baseURL: "http://localhost:5000/api/test", 
-  withCredentials: true, 
->>>>>>> 92db2ff50eb5fe9ef7af60f98cdaeda0e858eaf9
 });
  
 api.interceptors.request.use(

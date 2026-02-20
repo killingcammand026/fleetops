@@ -49,10 +49,10 @@ const UserTable = ({ users, refresh }) => {
                   handleRoleChange(user._id, e.target.value)
                 }
               >
-                <option>Admin</option>
-                <option>FleetManager</option>
-                <option>Driver</option>
-                <option>Customer</option>
+                <option value="Admin">Admin</option>
+                <option value="Fleet Manager">FleetManager</option>
+                <option value="Driver">Driver</option>
+                <option value="Customer">Customer</option>
               </select>
             </td>
 

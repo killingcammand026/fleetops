@@ -50,7 +50,7 @@ const AdminDashboard = () => {
 
       dispatch(addUser(newUser)); // update redux
       setShowForm(false);
-      setFormData({ name: "", email: "", password: "" });
+      setFormData({ name: "", email: "", password: "" ,});
 
     } catch (err) {
       dispatch(userError(err.response?.data?.error));
