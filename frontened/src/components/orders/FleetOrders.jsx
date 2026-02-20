@@ -10,12 +10,12 @@ const FleetOrders = () => {
   const { user } = useSelector((state) => state.auth);
   const [highlightedOrder, setHighlightedOrder] = useState(null);
 
-  // Show all orders (or filter by fleetManagerId if needed)
+ 
   const myOrders = orders.length > 0 
     ? orders.filter((order) => !order.fleetManagerId || order.fleetManagerId === user?._id)
     : orders;
 
-  // Sort orders: pending first, then by date
+  
   const sortedOrders = [...myOrders].sort((a, b) => {
     if (a.status === "pending" && b.status !== "pending") return -1;
     if (a.status !== "pending" && b.status === "pending") return 1;
