@@ -11,6 +11,7 @@ import AdminOrders from "./pages/admin/AdminOrders"
 import FleetDashboard from "./pages/fleet/FleetDashboard"
 import FleetDrivers from "./pages/fleet/FleetDrivers"
 import ProtectedRoute from "./components/ProtectedRoute"
+import CustomerCreateOrder from "./pages/customer/CustomerCreateOrder"
 
 function App() {
   return (
@@ -41,12 +42,12 @@ function App() {
           element={<ProtectedRoute allowedRole="Customer"><CustomerDashboard /></ProtectedRoute>} 
         />
         <Route 
-          path="/customer/orders" 
+          path="/customer/allorders" 
           element={<ProtectedRoute allowedRole="Customer"><CustomerOrders /></ProtectedRoute>} 
         />
         <Route 
-          path="/customer/profile" 
-          element={<ProtectedRoute allowedRole="Customer"><CustomerDashboard /></ProtectedRoute>} 
+          path="/customer/createorders" 
+          element={<ProtectedRoute allowedRole="Customer"><CustomerCreateOrder /></ProtectedRoute>} 
         />
 
         {/* Admin Routes */}

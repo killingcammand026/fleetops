@@ -50,7 +50,7 @@ const Login=()=>{
 
         if (role === "Admin") navigate("/admin/users");
         if (role === "Driver") navigate("/driver/dashboard");
-        if (role === "FleetManager") navigate("/fleet/users");
+        if (role === "Fleet Manager") navigate("/fleet/users");
         if (role === "Customer") navigate("/customer/dashboard");
       } catch (err) {
         const message =
