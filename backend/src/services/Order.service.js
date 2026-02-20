@@ -277,11 +277,19 @@ export const assignDriverService = async (orderId) => {
     session.startTransaction();
 
     try {
-        const io = getIO();
+        let io;
+        try{
+         io = getIO();
+        }
+        catch(error){
+            io=null;
+        }
 
         let order = await Order.findById(orderId).session(session);
 
         if (!order) throw new Error("Order not found");
+
+        console.log("order :",order);
 
         if (!["CREATED", "DRIVER_ASSIGNED"].includes(order.status))
             throw new Error("Driver can be assigned only to CREATED order");
@@ -294,16 +302,18 @@ export const assignDriverService = async (orderId) => {
             await session.commitTransaction();
             session.endSession();
 
+            if(io){
             io.to(`order_${orderId}`).emit("orderCancelled", {
                 orderId: order._id,
                 reason: "No drivers accepted the order"
             });
+        }
 
             return order;
         }
 
         const nearestDriver = await Driver.findOne({
-            _id: { $nin: order.rejectedDrivers },
+            _id: { $nin: order.rejectedDrivers || []},
             isAvailable: true,
             liveLocation: {
                 $near: {
@@ -323,11 +333,12 @@ export const assignDriverService = async (orderId) => {
             await session.commitTransaction();
             session.endSession();
 
+            if(io){
             io.to(`order_${orderId}`).emit("orderCancelled", {
                 orderId: order._id,
                 reason: "No available drivers nearby"
             });
-
+        }
             return order;
         }
 
@@ -344,11 +355,12 @@ export const assignDriverService = async (orderId) => {
         await session.commitTransaction();
         session.endSession();
 
+        if(io){
         io.to(`order_${orderId}`).emit("driverAssigned", {
             orderId: order._id,
             driverId: nearestDriver._id
         });
-
+       }   
         // ✅ schedule timeout again
         await orderQueue.add(
             "order-timeout",
@@ -357,7 +369,7 @@ export const assignDriverService = async (orderId) => {
                 previousDriverId: nearestDriver._id
             },
             {
-                delay: 5000
+                delay: Number(process.env.driverAssignTimeoutDelay)
             }
         );
 
@@ -371,6 +383,13 @@ export const assignDriverService = async (orderId) => {
 };
 
 export const cancelOrderService =async(orderId,loggedInUser)=>{
+    let io;
+    try{
+       io=getIO();
+    }catch(error){
+        io=null;
+    }
+    
     let order=await Order.findById(orderId);
     if(!order){
         throw new Error("Order not found");
@@ -390,10 +409,12 @@ export const cancelOrderService =async(orderId,loggedInUser)=>{
 
     order.status="CANCELLED";
     await order.save();
-        const io=getIO();
+       
+        if(io){
         io.to(`order_${orderId}`).emit("orderCancelled",{
             orderId:order._id
         });
+    }
         return order;
 };
 export const driverAcceptOrderService=async(orderId,loggedInUser)=>{
@@ -438,10 +459,17 @@ export const driverRejectOrderService=async(orderId,loggedInUser)=>{
      driver.isAvailable = true;
      await driver.save();
 
+    if(!order.rejectedDrivers.some(
+        id=>id.toString()===driver._id.toString()
+    )){
+        order.rejectedDrivers.push(driver._id);
+    }
+    console.log("Rejected Drivers:",order.rejectedDrivers);
+
     order.driver=null;
     order.status="CREATED";
     await order.save();
 
-    return await assignDriverService(orderId,loggedInUser,[driver._id]);
+    return await assignDriverService(orderId);
 
 };

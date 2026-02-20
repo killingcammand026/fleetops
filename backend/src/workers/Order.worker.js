@@ -1,53 +1,82 @@
 import { Worker } from "bullmq";
-import { RedisConnection } from "bullmq";
-import Order from "../models/Order.model.js"
-import Driver from "../models/Driver.model.js"
-import {assignDriverService} from "../services/Order.service.js"
+
+import Order from "../models/Order.model.js";
+import Driver from "../models/Driver.model.js";
+import { assignDriverService } from "../services/Order.service.js";
 import { redisConnection } from "../config/redis.config.js";
 
 console.log("Worker Started");
 
 new Worker(
-    "orderQueue",
-    async job =>{
-        if(job.name==="order-timeout"){
-            console.log("processing timeout job:",job.data);
+  "orderQueue",
+  async (job) => {
+    try {
 
-            const {orderId,previousDriverId}=job.data;
+      if (job.name !== "order-timeout") return;
 
-            const freshOrder=await Order.findById(orderId);
-            if(!freshOrder) return;
+      console.log("processing timeout job:", job.data);
 
-            console.log("Order status:", freshOrder.status);
+      const { orderId, previousDriverId } = job.data;
 
-            if (freshOrder.status === "DRIVER_ASSIGNED") {
-                 console.log("Pushing rejected driver:", previousDriverId);
-                 if (previousDriverId) {
+      console.log("orderID and previousDriverID:", orderId, previousDriverId);
 
-                   const driver = await Driver.findById(previousDriverId);
-                        if (driver) {
-                          driver.isAvailable = true;
-                        await driver.save();
-                       }
+      const freshOrder = await Order.findById(orderId);
 
-        // 🔥 THIS LINE IS CRITICAL
-        console.log("Before push:", freshOrder.rejectedDrivers);
-        freshOrder.rejectedDrivers.push(previousDriverId);
-        console.log("After push:", freshOrder.rejectedDrivers);
-        await freshOrder.save();
-    }
+      if (!freshOrder) {
+        console.log("Order not found");
+        return;
+      }
 
-    freshOrder.driver = null;
-    freshOrder.status = "CREATED";
+      console.log("Order status:", freshOrder.status);
 
-    await freshOrder.save();
-    console.log("Rejected drivers after push:", freshOrder.rejectedDrivers);
-    await assignDriverService(orderId);
-}
+      if (previousDriverId) {
+
+        console.log("Pushing rejected driver:", previousDriverId);
+
+        // make driver available again
+        const driver = await Driver.findById(previousDriverId);
+
+        if (driver) {
+          driver.isAvailable = true;
+          await driver.save();
+        }
+
+        // ✅ FIX: use string comparison for ObjectId
+        const alreadyRejected = freshOrder.rejectedDrivers.some(
+          id => id.toString() === previousDriverId.toString()
+        );
+
+        if (!alreadyRejected) {
+
+          console.log("Before push:", freshOrder.rejectedDrivers);
+
+          freshOrder.rejectedDrivers.push(previousDriverId);
+
+          console.log("After push:", freshOrder.rejectedDrivers);
 
         }
-    },
-    {
-        connection:redisConnection
+
+      }
+
+      // reset order
+      freshOrder.driver = null;
+      freshOrder.status = "CREATED";
+
+      await freshOrder.save();
+
+      console.log("Rejected drivers after save:", freshOrder.rejectedDrivers);
+
+      // assign next driver
+      await assignDriverService(orderId);
+
+    } catch (error) {
+
+      console.error("Worker error:", error);
+
     }
+  },
+  {
+    connection: redisConnection,
+    concurrency: 1   // ✅ prevent race condition
+     }
 );

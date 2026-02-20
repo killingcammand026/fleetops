@@ -89,7 +89,8 @@ const orderSchema=new mongoose.Schema({
     rejectedDrivers:[
         {
             type:mongoose.Schema.Types.ObjectId,
-            ref:"Driver"
+            ref:"Driver",
+             default: []
         }
     ],
     retryCount:{
