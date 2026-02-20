@@ -22,37 +22,29 @@ const CustomerDashboard = () => {
   const { orders } = useSelector((state) => state.order);
   const [autoRefresh, setAutoRefresh] = useState(true);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        dispatch(startLoading());
-        // Try to fetch customer data (may fail if backend unavailable)
-        try {
-          const data = await getCustomerByIdAPI(user?.id || user?._id);
-          dispatch(setCustomer(data));
-        } catch (err) {
-          // Use mock customer data if backend unavailable
-          dispatch(setCustomer({
-            _id: user?.id || user?._id,
-            name: user?.name,
-            email: user?.email,
-            address: "123 Main St, Delhi",
-            paymentMethod: { method: "Credit Card" },
-          }));
-        }
+ useEffect(() => {
+  const fetchData = async () => {
+    try {
+      dispatch(startLoading());
 
-        // Load orders
-        const ordersData = await getAllOrdersAPI();
-        dispatch(setOrders(ordersData));
-      } catch (err) {
-        console.error("Failed to load data:", err);
-      }
-    };
+      // Fetch customer from real backend
+      const data = await getCustomerByIdAPI(user?.id || user?._id);
+      dispatch(setCustomer(data));
 
-    if (user) {
-      fetchData();
+      // Load orders
+      const ordersData = await getAllOrdersAPI();
+      dispatch(setOrders(ordersData));
+
+    } catch (err) {
+      console.error("Failed to load data:", err);
+      dispatch(customerError("Failed to load customer data"));
     }
-  }, [dispatch, user]);
+  };
+
+  if (user) {
+    fetchData();
+  }
+}, [dispatch, user]);
 
   // Auto-refresh orders every 5 seconds
   useEffect(() => {
@@ -70,7 +62,7 @@ const CustomerDashboard = () => {
     return () => clearInterval(interval);
   }, [dispatch, autoRefresh]);
 
-  // Filter orders for this customer
+  
   const myOrders = orders.filter(
     (order) => order.customerId === (user?.id || user?._id)
   );

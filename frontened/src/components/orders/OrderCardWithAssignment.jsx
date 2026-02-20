@@ -23,7 +23,7 @@ const OrderCardWithAssignment = ({ order, showAssignButton = false }) => {
   const [showDriverSelect, setShowDriverSelect] = useState(false);
 
   useEffect(() => {
-    // Load drivers if not already loaded
+   
     if (drivers.length === 0) {
       const loadDrivers = async () => {
         try {
