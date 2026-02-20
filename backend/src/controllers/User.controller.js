@@ -4,7 +4,8 @@ import {
     getUSerByIdService,
     updateUserService,
     deleteUserService,
-    updateUserRoleService
+    updateUserRoleService,
+    createFleetManagerService
 } from "../services/User.service.js";
 
 export const createUserController=async(req,res)=>{
@@ -56,7 +57,7 @@ export const deleteUserController=async(req,res)=>{
 };
 export const createFleetManagerController=async(req,res)=>{
     try{
-        const user=await createUserService(req.body);
+        const user=await createFleetManagerService(req.body);
         res.status(201).json(user);
     }
     catch(error){
