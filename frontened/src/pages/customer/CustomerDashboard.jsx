@@ -19,19 +19,17 @@ const CustomerDashboard = () => {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
   const { currentCustomer, loading } = useSelector((state) => state.customer);
-  const { orders } = useSelector((state) => state.order);
+const orders = useSelector((state) => state.order.orders) || [];
   const [autoRefresh, setAutoRefresh] = useState(true);
 
- useEffect(() => {
+useEffect(() => {
   const fetchData = async () => {
     try {
       dispatch(startLoading());
 
-      // Fetch customer from real backend
-      const data = await getCustomerByIdAPI(user?.id || user?._id);
-      dispatch(setCustomer(data));
+      // Use logged in user directly
+      dispatch(setCustomer(user));
 
-      // Load orders
       const ordersData = await getAllOrdersAPI();
       dispatch(setOrders(ordersData));
 
@@ -53,7 +51,7 @@ const CustomerDashboard = () => {
     const interval = setInterval(async () => {
       try {
         const ordersData = await getAllOrdersAPI();
-        dispatch(setOrders(ordersData));
+        dispatch(setOrders(Array.isArray(ordersData) ? ordersData : []));
       } catch (err) {
         console.error("Failed to refresh orders:", err);
       }
@@ -63,9 +61,11 @@ const CustomerDashboard = () => {
   }, [dispatch, autoRefresh]);
 
   
-  const myOrders = orders.filter(
-    (order) => order.customerId === (user?.id || user?._id)
-  );
+  const myOrders = Array.isArray(orders)
+  ? orders.filter(
+      (order) => order.customerId === (user?.id || user?._id)
+    )
+  : [];
 
   // Sort orders: pending first, then by date
   const sortedOrders = [...myOrders].sort((a, b) => {
@@ -167,10 +167,41 @@ const CustomerDashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Create Order Form */}
-          <div className="lg:sticky lg:top-6 h-fit">
-            <CreateOrderForm />
-          </div>
+  
+       <div className="max-w-md bg-white shadow-md rounded-xl p-6 border hover:shadow-xl transition-all duration-300">
+  
+  <div className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">
+    Customer Data
+  </div>
+
+  <div className="space-y-3 text-gray-700">
+    
+    <div className="flex justify-between items-center">
+      <span className="font-medium">Name:</span>
+      <span className="text-gray-900">{currentCustomer?.name || "N/A"}</span>
+    </div>
+
+    <div className="flex justify-between items-center">
+      <span className="font-medium">Email:</span>
+      <span
+        onClick={() => navigator.clipboard.writeText(currentCustomer?.email)}
+        className="text-blue-600 cursor-pointer hover:underline"
+        title="Click to copy"
+      >
+        {currentCustomer?.email || "N/A"}
+      </span>
+    </div>
+
+    <div className="flex justify-between items-center">
+      <span className="font-medium">Role:</span>
+      <span className="px-3 py-1 text-sm rounded-full bg-blue-100 text-blue-700 capitalize">
+        {user?.role || "N/A"}
+      </span>
+    </div>
+
+  </div>
+</div>
+
 
           {/* Orders List */}
           <div className="space-y-5">

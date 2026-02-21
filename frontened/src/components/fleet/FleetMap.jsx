@@ -7,8 +7,8 @@ import { GoogleMap, Marker, useLoadScript, InfoWindow } from "@react-google-maps
 
 const FleetMap = () => {
   const dispatch = useDispatch();
-  const { drivers } = useSelector((state) => state.driver);
-  const { orders } = useSelector((state) => state.order);
+const drivers = useSelector((state) => state.driver?.drivers) || [];
+const orders = useSelector((state) => state.order?.orders) || [];
   const [selectedDriver, setSelectedDriver] = useState(null);
   const [center, setCenter] = useState({ lat: 28.6139, lng: 77.2090 }); // Delhi center
 

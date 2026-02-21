@@ -92,7 +92,7 @@ const authSlice=createSlice({
 
             state.loading = false;
             state.token = token;
-            state.user = decoded;
+            state.user = decoded || action.payload.user || action.payload;
             state.role = decoded.role || action.payload.role;
             state.isAuthenticated = true;
 

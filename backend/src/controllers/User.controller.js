@@ -75,4 +75,3 @@ export const updateUserRoleController=async(req,res)=>{
     }
 };
 
-

@@ -11,16 +11,20 @@ const AdminOrders = () => {
   const { orders } = useSelector((state) => state.order);
 
   useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const ordersData = await getAllOrdersAPI();
-        dispatch(setOrders(ordersData));
-      } catch (err) {
-        console.error("Failed to load orders:", err);
-      }
-    };
-    fetchOrders();
-  }, [dispatch]);
+  const fetchOrders = async () => {
+    try {
+      const ordersData = await getAllOrdersAPI();
+     
+
+      dispatch(setOrders(Array.isArray(ordersData) ? ordersData : []));
+    } catch (err) {
+      console.error("Failed to load orders:", err);
+      dispatch(setOrders([]));
+    }
+  };
+
+  fetchOrders();
+}, [dispatch]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -49,7 +53,9 @@ const AdminOrders = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Orders ({orders.length})</CardTitle>
+           <CardTitle>
+  Orders ({Array.isArray(orders) ? orders.length : 0})
+</CardTitle>
           </CardHeader>
           <CardContent>
             {orders.length === 0 ? (
@@ -58,7 +64,7 @@ const AdminOrders = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {orders.map((order) => (
+                {Array.isArray(orders) && orders.map((order) => (
                   <div
                     key={order._id}
                     className="border rounded-lg p-4 bg-white hover:shadow-md transition-shadow"

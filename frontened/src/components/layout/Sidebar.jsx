@@ -55,10 +55,10 @@ const Sidebar = ({ role }) => {
               <span className="mr-3">📊</span>
               <span>Dashboard</span>
             </Link>
-            <Link to="/admin/users" style={navItemStyle("/admin/users")}>
+            {/* <Link to="/admin/users" style={navItemStyle("/admin/users")}>
               <span className="mr-3">👥</span>
               <span>Manage Users</span>
-            </Link>
+            </Link> */}
             <Link to="/admin/orders" style={navItemStyle("/admin/orders")}>
               <span className="mr-3">📦</span>
               <span>All Orders</span>
@@ -66,7 +66,7 @@ const Sidebar = ({ role }) => {
           </>
         )}
 
-        {role === "FleetManager" && (
+        {role === "Fleet Manager" && (
           <>
             <Link to="/fleet/users" style={navItemStyle("/fleet/users")}>
               <span className="mr-3">📊</span>
@@ -89,13 +89,13 @@ const Sidebar = ({ role }) => {
               <span className="mr-3">🏠</span>
               <span>Dashboard</span>
             </Link>
-            <Link to="/customer/orders" style={navItemStyle("/customer/orders")}>
+            <Link to="/customer/allorders" style={navItemStyle("/customer/orders")}>
               <span className="mr-3">📦</span>
               <span>My Orders</span>
             </Link>
-            <Link to="/customer/profile" style={navItemStyle("/customer/profile")}>
+            <Link to="/customer/createorders" style={navItemStyle("/customer/createorders")}>
               <span className="mr-3">👤</span>
-              <span>Profile</span>
+              <span>Create Order</span>
             </Link>
           </>
         )}
@@ -110,7 +110,7 @@ const Sidebar = ({ role }) => {
               <span className="mr-3">📦</span>
               <span>My Orders</span>
             </Link>
-            <Link to="/driver/map" style={navItemStyle("/driver/map")}>
+            <Link to="/driver/mapviewer" style={navItemStyle("/driver/mapviewer")}>
               <span className="mr-3">🗺️</span>
               <span>Live Map</span>
             </Link>

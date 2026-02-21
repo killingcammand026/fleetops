@@ -16,18 +16,26 @@ const CustomerOrders = () => {
     const fetchOrders = async () => {
       try {
         const ordersData = await getAllOrdersAPI();
-        dispatch(setOrders(ordersData));
+            dispatch(setOrders(Array.isArray(ordersData) ? ordersData : []));
       } catch (err) {
         console.error("Failed to load orders:", err);
+         dispatch(setOrders([]));
       }
     };
     fetchOrders();
   }, [dispatch]);
 
   // Filter orders for this customer
-  const myOrders = orders.filter(
-    (order) => order.customerId === (user?.id || user?._id)
-  );
+ const safeOrders = Array.isArray(orders) ? orders : [];
+
+const myOrders = safeOrders.filter((order) => {
+  const customerId =
+    typeof order.customerId === "object"
+      ? order.customerId._id
+      : order.customerId;
+
+  return customerId?.toString() === user?._id?.toString();
+});
 
   const getStatusColor = (status) => {
     switch (status) {

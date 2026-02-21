@@ -224,9 +224,9 @@ const DriverDashboard = () => {
             </CardContent>
           </Card>
         </div>
-
-        <DriverMap />
-        <LocationTracker />
+       <div>
+        You can see the Live Map from the sidebar to view your real-time location and route.
+       </div>
       </div>
     </DashboardLayout>
   );

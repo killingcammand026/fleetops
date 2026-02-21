@@ -15,23 +15,17 @@ const FleetDashboard = () => {
   const { user } = useSelector((state) => state.auth);
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        // Load orders (customer-placed orders for fleet manager to assign)
-        const orders = await getAllOrdersAPI();
-        dispatch(setOrders(orders));
+   const loadData = async () => {
+  try {
+    const orders = await getAllOrdersAPI();
+    dispatch(setOrders(orders || []));
 
-        // Load drivers (for assignment to orders)
-        const driversRes = await getAllDriversAPI();
-        const drivers = driversRes?.data ?? driversRes;
-        if (Array.isArray(drivers)) dispatch(setDrivers(drivers));
-
-        // Assignments are derived from orders (orders with assignedDriverId)
-        dispatch(setAssignments([]));
-      } catch (err) {
-        console.error("Failed to load fleet data:", err);
-      }
-    };
+    const drivers = await getAllDriversAPI();
+    dispatch(setDrivers(drivers?.data || drivers || []));
+  } catch (err) {
+    console.error(err);
+  }
+};
 
     loadData();
     // Refresh every 5 seconds for real-time updates
@@ -39,9 +33,9 @@ const FleetDashboard = () => {
     return () => clearInterval(interval);
   }, [dispatch]);
 
-  const { orders } = useSelector((state) => state.order);
-  const pendingCount = orders.filter((o) => o.status === "pending").length;
-  const assignedCount = orders.filter((o) => o.status === "assigned").length;
+const orders = useSelector((state) => state.order?.orders ?? []);
+const pendingCount = orders.filter(o => o.status === "pending").length;
+ const assignedCount = orders.filter((o) => o.status === "assigned").length ;
   const inTransitCount = orders.filter((o) => o.status === "in-transit").length;
 
   return (
@@ -82,14 +76,11 @@ const FleetDashboard = () => {
         )}
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="animate-slide-in-left">
+       
+         
             <FleetMap />
-          </div>
-          <div className="animate-slide-in-right">
-            <FleetOrders />
-          </div>
-        </div>
+        
+       
       </div>
 
       <style>{`
