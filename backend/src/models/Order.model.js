@@ -62,7 +62,7 @@ const orderSchema=new mongoose.Schema({
         },
         status:{
             type:String,
-            enum:["PENDING","COMPLETED","FAILED"],
+            enum:["PENDING","COMPLETED","FAILED","REFUNDED"],
             default:"PENDING"
         },
         amount:{
@@ -70,6 +70,20 @@ const orderSchema=new mongoose.Schema({
             required:true,
         },
         transactionId:String,
+        currency:{
+            type:String,
+            default:"INR"
+        },
+        razorpayPaymentId:{
+            type:String,
+        },
+        razorpaySignature:{
+            type:String,
+        },
+        paidAt:{
+            type:Date,
+        },
+
 
 
     },
@@ -101,6 +115,12 @@ const orderSchema=new mongoose.Schema({
         type:Number,
         default:3
     },
+    statusHistory:[
+       {
+           status:String,
+           updatedAt:Date
+      }
+    ],
 },{timestamps:true});
 
 orderSchema.index({pickupLocation:"2dsphere"});

@@ -163,11 +163,15 @@ export const updateOrderStatusService = async (
   loggedInUser
 ) => {
 
-  const order = await Order.findById(orderId);
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try{
+  const order = await Order.findById(orderId).session(session);
 
   if (!order) {
     throw new Error("Order not found");
   }
+  
 
   //STATUS TRANSITION CONTROL
   const allowedTransitions = {
@@ -212,7 +216,7 @@ export const updateOrderStatusService = async (
       throw new Error("Only driver can update this status");
     }
 
-    const driver = await Driver.findById(order.driver);
+    const driver = await Driver.findById(order.driver).session(session);
 
     if (!driver) {
       throw new Error("Driver not found");
@@ -229,7 +233,7 @@ export const updateOrderStatusService = async (
       throw new Error("Only customer can cancel order");
     }
 
-    const customer = await Customer.findById(order.customer);
+    const customer = await Customer.findById(order.customer).session(session);
 
     if (!customer) {
       throw new Error("Customer not found");
@@ -257,10 +261,27 @@ export const updateOrderStatusService = async (
   }
 
   if (newStatus === "DELIVERED") {
+     const driver = await Driver.findById(order.driver);
+       if (!driver) {
+    throw new Error("Driver not found");
+  }
+  const platformFee = Number(process.env.PLATFORM_FEE);
+    if(order.payment.method==="COD"){
+        order.payment.status="COMPLETED";
+        order.payment.paidAt=new Date();
+    }
+    driver.walletBalance+=order.estimateFare-platformFee;
+     await driver.save({session});
     order.deliveredAt = new Date();
   }
 
-  await order.save();
+
+  order.statusHistory.push({
+   status:newStatus,
+   updatedAt:new Date()
+   })
+
+  await order.save({session});
 
   //emit status update to order room
   const io=getIO();
@@ -270,6 +291,11 @@ export const updateOrderStatusService = async (
   }));
 
   return order;
+}catch(error){
+        await session.abortTransaction();
+        session.endSession();
+        throw error;
+}
 };
 export const assignDriverService = async (orderId) => {
 
@@ -346,6 +372,10 @@ export const assignDriverService = async (orderId) => {
         order.retryCount += 1;
         order.driver = nearestDriver._id;
         order.status = "DRIVER_ASSIGNED";
+        order.statusHistory.push({
+           status:newStatus,
+            updatedAt:new Date()
+         })
 
         nearestDriver.isAvailable = false;
 
@@ -405,9 +435,11 @@ export const cancelOrderService =async(orderId,loggedInUser)=>{
         throw new Error("Order cannot be cancelled at this stage");
     }
     order.driver=null;
-    await order.save();
-
     order.status="CANCELLED";
+    order.statusHistory.push({
+      status:"CANCELLED",
+      updatedAt:new Date()
+    })
     await order.save();
        
         if(io){
@@ -436,6 +468,10 @@ export const driverAcceptOrderService=async(orderId,loggedInUser)=>{
 
 
     order.status="DRIVER_ACCEPTED";
+    order.statusHistory.push({
+       status:"DRIVER_ACCEPTED",
+       updatedAt:new Date()
+    })
     await order.save();
     return order;
 
@@ -468,6 +504,10 @@ export const driverRejectOrderService=async(orderId,loggedInUser)=>{
 
     order.driver=null;
     order.status="CREATED";
+    order.statusHistory.push({
+   status:"CREATED",
+   updatedAt:new Date()
+})
     await order.save();
 
     return await assignDriverService(orderId);
