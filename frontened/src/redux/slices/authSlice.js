@@ -33,6 +33,12 @@ const authSlice=createSlice({
     name:"auth",
     initialState,
     reducers:{
+        // When store rehydrates from storage, never restore loading: true so login button is always usable
+        ["persist/REHYDRATE"]: (state, action) => {
+            if (action.payload?.auth) {
+                state.loading = false;
+            }
+        },
         //actions
         startLoading:(state)=>{
             state.loading=true;
@@ -107,6 +113,12 @@ const authSlice=createSlice({
             state.loading = false;
             state.error = action.payload;
         },
+
+        // Reset login form state (e.g. when mounting Login page) so button shows "Login" and is clickable
+        resetLoginForm: (state) => {
+            state.loading = false;
+            state.error = null;
+        },
     },
 });
 
@@ -117,5 +129,6 @@ export const {
   loginSuccess,
   loginFailure,
   logout,
+  resetLoginForm,
 } = authSlice.actions;
 export default authSlice.reducer;

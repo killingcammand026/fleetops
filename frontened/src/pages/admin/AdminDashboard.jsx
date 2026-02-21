@@ -62,7 +62,7 @@ const AdminDashboard = () => {
 
   return (
     <DashboardLayout>
-      <div className="w-full min-h-screen px-4 sm:px-6 lg:px-10 py-6 space-y-8 max-w-screen-2xl mx-auto">
+      <div className="w-full min-h-screen px-4 sm:px-6 lg:px-10 py-6 space-y-8">
 
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">

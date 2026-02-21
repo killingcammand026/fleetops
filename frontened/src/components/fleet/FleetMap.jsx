@@ -50,9 +50,16 @@ const orders = useSelector((state) => state.order?.orders) || [];
     }
   };
 
-  // Get driver's assigned order
+  const orderDriverId = (order) => {
+    const d = order.driver;
+    if (!d) return null;
+    return typeof d === "object" && d !== null ? d._id : d;
+  };
   const getDriverOrder = (driverId) => {
-    return orders.find((o) => o.assignedDriverId === driverId);
+    return orders.find((o) => {
+      const oid = orderDriverId(o);
+      return oid && (oid === driverId || oid.toString() === driverId?.toString());
+    });
   };
 
   if (!isLoaded && import.meta.env.VITE_GOOGLE_MAPS_KEY) {
@@ -83,16 +90,16 @@ const orders = useSelector((state) => state.order?.orders) || [];
                   <div>
                     <p className="font-medium">{driver.name}</p>
                     <p className="text-sm text-gray-600">
-                      {driver.vehicle?.type} - {driver.vehicle?.plate}
+                      {driver.vehicle?.type} - {driver.vehicle?.registrationNumber || driver.vehicle?.plate}
                     </p>
                     <p className="text-xs text-gray-500">
-                      Status: <span className={`font-semibold text-${getStatusColor(driver.status)}-600`}>
+                      Status: <span className={`font-semibold text-${getStatusColor(driver.status?.toLowerCase?.() || driver.status)}-600`}>
                         {driver.status}
                       </span>
                     </p>
                     {order && (
                       <p className="text-xs text-blue-600 mt-1">
-                        Order: {order.customerName} → {order.deliveryAddress}
+                        Order: {order.customer?.name ?? order.customerName ?? "Customer"} → {order.deliveryAddress || (order.dropLocation?.coordinates && `Lat ${order.dropLocation.coordinates[1]?.toFixed(2)}, Lng ${order.dropLocation.coordinates[0]?.toFixed(2)}`) || "N/A"}
                       </p>
                     )}
                   </div>
@@ -124,17 +131,23 @@ const orders = useSelector((state) => state.order?.orders) || [];
         mapContainerStyle={{ width: "100%", height: "500px", borderRadius: "8px" }}
       >
         {drivers
-          .filter((driver) => driver.location && driver.status !== "offline")
+          .filter((driver) => {
+            const coords = driver.liveLocation?.coordinates || driver.location;
+            return (coords && (Array.isArray(coords) ? coords.length >= 2 : (driver.location?.lat != null))) && driver.status !== "Offline" && driver.status !== "offline";
+          })
           .map((driver) => {
             const order = getDriverOrder(driver._id);
+            const lat = driver.liveLocation?.coordinates?.[1] ?? driver.location?.lat;
+            const lng = driver.liveLocation?.coordinates?.[0] ?? driver.location?.lng;
+            if (lat == null || lng == null) return null;
             return (
               <Marker
                 key={driver._id}
-                position={{ lat: driver.location.lat, lng: driver.location.lng }}
+                position={{ lat, lng }}
                 icon={{
                   path: window.google?.maps?.SymbolPath?.CIRCLE || "",
                   scale: 8,
-                  fillColor: getStatusColor(driver.status),
+                  fillColor: getStatusColor(driver.status?.toLowerCase?.() || driver.status),
                   fillOpacity: 1,
                   strokeColor: "#fff",
                   strokeWeight: 2,
@@ -143,20 +156,20 @@ const orders = useSelector((state) => state.order?.orders) || [];
               >
                 {selectedDriver?._id === driver._id && (
                   <InfoWindow
-                    position={{ lat: driver.location.lat, lng: driver.location.lng }}
+                    position={{ lat, lng }}
                     onCloseClick={() => setSelectedDriver(null)}
                   >
                     <div className="p-2">
                       <p className="font-semibold">{driver.name}</p>
-                      <p className="text-sm">{driver.vehicle?.type} - {driver.vehicle?.plate}</p>
+                      <p className="text-sm">{driver.vehicle?.type} - {driver.vehicle?.registrationNumber || driver.vehicle?.plate}</p>
                       <p className="text-xs">Status: {driver.status}</p>
                       {order && (
                         <>
                           <p className="text-xs mt-1 text-blue-600">
-                            Order: {order.customerName}
+                            Order: {order.customer?.name ?? order.customerName ?? "Customer"}
                           </p>
                           <p className="text-xs text-gray-600">
-                            To: {order.deliveryAddress}
+                            To: {order.deliveryAddress || (order.dropLocation?.coordinates && `Lat ${order.dropLocation.coordinates[1]?.toFixed(2)}, Lng ${order.dropLocation.coordinates[0]?.toFixed(2)}`) || "N/A"}
                           </p>
                         </>
                       )}

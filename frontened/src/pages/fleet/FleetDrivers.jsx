@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import { getAllDriversAPI } from "../../services/driverService";
-import { getAllUsersAPI } from "../../services/userService";
+import { getAllCustomersAPI } from "../../services/customerService";
 import { createDriverAPI } from "../../services/driverService";
 import { setDrivers, addDriver } from "../../redux/slices/driverSlice";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
@@ -26,38 +26,49 @@ const FleetDrivers = () => {
   userId: "",
   vehicleType: "Van",
   vehiclePlate: "",
+  phone: "",
 });
 
 
 const [customers, setCustomers] = useState([]);
-  
+
+// Backend expects userId = User document _id. Customer has userId (ref User). Normalize from any response shape.
+const getCustomerUserId = (customer) => {
+  const u = customer?.userId;
+  if (u == null) return null;
+  if (typeof u === "string") return u;
+  if (typeof u === "object" && u.$oid) return u.$oid;
+  const id = u._id ?? u;
+  return id != null ? (typeof id === "string" ? id : String(id)) : null;
+};
 
 useEffect(() => {
   const fetchData = async () => {
     try {
       const driverRes = await getAllDriversAPI();
-      const driverData = driverRes.data?.data || driverRes.data || [];
+      const driverData = Array.isArray(driverRes?.data) ? driverRes.data : (Array.isArray(driverRes) ? driverRes : []);
       dispatch(setDrivers(driverData));
 
-      const userRes = await getAllUsersAPI();
-      const allUsers = userRes.data?.data || userRes.data || [];
-
-      console.log("All Users:", allUsers);
-
-      const existingDriverUserIds = driverData.map(
-        (d) => d.userId
+      const existingDriverUserIds = new Set(
+        driverData.map((d) => getCustomerUserId({ userId: d.userId })).filter(Boolean)
       );
 
-      const customerUsers = allUsers.filter(
-        (u) =>
-          u.role === "Customer" &&
-          !existingDriverUserIds.includes(u._id)
+      let customerList = [];
+      try {
+        const customersRes = await getAllCustomersAPI();
+        customerList = Array.isArray(customersRes) ? customersRes : [];
+      } catch (e) {
+        customerList = [];
+      }
+
+      const availableCustomers = customerList.filter(
+        (c) => !existingDriverUserIds.has(getCustomerUserId(c))
       );
 
-      setCustomers(customerUsers);
-
+      setCustomers(availableCustomers);
     } catch (err) {
       console.error("Fetch error:", err);
+      setCustomers([]);
     }
   };
 
@@ -67,24 +78,41 @@ useEffect(() => {
   const handleSubmit = async (e) => {
   e.preventDefault();
 
-  if (!formData.userId || !formData.vehiclePlate) {
-    toast.error("Please select a customer and enter vehicle plate.");
+  if (!formData.userId || !formData.vehiclePlate || !formData.phone) {
+    toast.error("Please select a customer, enter vehicle plate and phone.");
     return;
   }
 
   setLoading(true);
 
   try {
+    const selectedCustomer = customers.find(
+      (c) => getCustomerUserId(c) === String(formData.userId)
+    );
+    const userIdToSend = selectedCustomer
+      ? getCustomerUserId(selectedCustomer)
+      : String(formData.userId);
+    if (!userIdToSend) {
+      toast.error("Invalid customer selection. Please select a customer again.");
+      setLoading(false);
+      return;
+    }
     const driverData = {
-      userId: formData.userId,
+      userId: userIdToSend,
+      name: selectedCustomer?.name || "Driver",
+      phone: formData.phone.trim(),
       vehicle: {
         type: formData.vehicleType,
-        plate: formData.vehiclePlate,
+        registrationNumber: formData.vehiclePlate.trim(),
+      },
+      liveLocation: {
+        type: "Point",
+        coordinates: [77.209, 28.6139],
       },
     };
 
     const result = await createDriverAPI(driverData);
-    const newDriver = result.data;
+    const newDriver = result.data ?? result;
 
     dispatch(addDriver(newDriver));
     toast.success("Driver profile created successfully!");
@@ -93,6 +121,7 @@ useEffect(() => {
       userId: "",
       vehicleType: "Van",
       vehiclePlate: "",
+      phone: "",
     });
 
   } catch (err) {
@@ -104,7 +133,7 @@ useEffect(() => {
 };
 
   const availableCount = drivers.filter(
-    (d) => d.status === "available" && d.isActive !== false
+    (d) => d.isAvailable !== false && (d.status === "Available" || d.status === "available")
   ).length;
 
   return (
@@ -142,11 +171,15 @@ useEffect(() => {
             <SelectValue placeholder="Select customer" />
           </SelectTrigger>
           <SelectContent>
-            {customers.map((user) => (
-              <SelectItem key={user._id} value={user._id}>
-                {user.name} ({user.email})
-              </SelectItem>
-            ))}
+            {customers.map((customer) => {
+              const userId = getCustomerUserId(customer);
+              if (!userId) return null;
+              return (
+                <SelectItem key={customer._id} value={userId}>
+                  {customer.name} {customer.phone ? `(${customer.phone})` : "(Customer)"}
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
       </div>
@@ -174,7 +207,7 @@ useEffect(() => {
 
       {/* Vehicle Plate */}
       <div>
-        <Label>Vehicle Plate</Label>
+        <Label>Vehicle Plate / Registration</Label>
         <Input
           value={formData.vehiclePlate}
           onChange={(e) =>
@@ -184,6 +217,19 @@ useEffect(() => {
             }))
           }
           placeholder="ABC-123"
+          required
+        />
+      </div>
+
+      {/* Phone (required by backend) */}
+      <div>
+        <Label>Phone</Label>
+        <Input
+          value={formData.phone}
+          onChange={(e) =>
+            setFormData((p) => ({ ...p, phone: e.target.value }))
+          }
+          placeholder="+1 234 567 8900"
           required
         />
       </div>

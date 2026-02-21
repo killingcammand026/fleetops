@@ -5,16 +5,17 @@ const FleetStats = () => {
   const drivers = useSelector((state) => state.driver?.drivers ?? []);
   const orders = useSelector((state) => state.order?.orders ?? []);
 
+  // Backend: CREATED, DRIVER_ASSIGNED, DRIVER_ACCEPTED, PICKED_UP, IN_TRANSIT, DELIVERED, CANCELLED. Driver: Available, On_Trip, Offline
   const stats = {
     totalDrivers: drivers.length,
-    availableDrivers: drivers.filter((d) => d.status === "available").length,
-    onRouteDrivers: drivers.filter((d) => d.status === "on-route").length,
+    availableDrivers: drivers.filter((d) => d.isAvailable !== false && (d.status === "Available" || d.status === "available")).length,
+    onRouteDrivers: drivers.filter((d) => d.status === "On_Trip" || d.status === "on-route").length,
     totalOrders: orders.length,
-    pendingOrders: orders.filter((o) => o.status === "pending").length,
-    inTransitOrders: orders.filter(
-      (o) => o.status === "in-transit" || o.status === "assigned"
+    pendingOrders: orders.filter((o) => o.status === "CREATED").length,
+    inTransitOrders: orders.filter((o) =>
+      ["DRIVER_ASSIGNED", "DRIVER_ACCEPTED", "PICKED_UP", "IN_TRANSIT"].includes(o.status)
     ).length,
-    deliveredOrders: orders.filter((o) => o.status === "delivered").length,
+    deliveredOrders: orders.filter((o) => o.status === "DELIVERED").length,
   };
 
   return (

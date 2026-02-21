@@ -49,7 +49,7 @@ const Register = () => {
       const role = response.data.role || response.data.user?.role;
       if (role === "Admin") navigate("/admin/users");
       else if (role === "Driver") navigate("/driver/dashboard");
-      else if (role === "FleetManager") navigate("/fleet/users");
+      else if (role === "Fleet Manager" || role === "FleetManager") navigate("/fleet/users");
       else if (role === "Customer") navigate("/customer/dashboard");
       else navigate("/");
     } catch (err) {

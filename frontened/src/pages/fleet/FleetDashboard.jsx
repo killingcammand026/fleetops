@@ -20,8 +20,9 @@ const FleetDashboard = () => {
     const orders = await getAllOrdersAPI();
     dispatch(setOrders(orders || []));
 
-    const drivers = await getAllDriversAPI();
-    dispatch(setDrivers(drivers?.data || drivers || []));
+    const driversRes = await getAllDriversAPI();
+    const drivers = Array.isArray(driversRes?.data) ? driversRes.data : (Array.isArray(driversRes) ? driversRes : []);
+    dispatch(setDrivers(drivers));
   } catch (err) {
     console.error(err);
   }
@@ -34,9 +35,10 @@ const FleetDashboard = () => {
   }, [dispatch]);
 
 const orders = useSelector((state) => state.order?.orders ?? []);
-const pendingCount = orders.filter(o => o.status === "pending").length;
- const assignedCount = orders.filter((o) => o.status === "assigned").length ;
-  const inTransitCount = orders.filter((o) => o.status === "in-transit").length;
+// Backend statuses: CREATED, DRIVER_ASSIGNED, DRIVER_ACCEPTED, PICKED_UP, IN_TRANSIT, DELIVERED, CANCELLED
+const pendingCount = orders.filter((o) => o.status === "CREATED").length;
+const assignedCount = orders.filter((o) => ["DRIVER_ASSIGNED", "DRIVER_ACCEPTED", "PICKED_UP"].includes(o.status)).length;
+const inTransitCount = orders.filter((o) => o.status === "IN_TRANSIT").length;
 
   return (
     <DashboardLayout>
