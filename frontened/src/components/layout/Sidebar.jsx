@@ -66,7 +66,7 @@ const Sidebar = ({ role }) => {
           </>
         )}
 
-        {role === "FleetManager" && (
+        {role === "Fleet Manager" && (
           <>
             <Link to="/fleet/users" style={navItemStyle("/fleet/users")}>
               <span className="mr-3">📊</span>
@@ -110,7 +110,7 @@ const Sidebar = ({ role }) => {
               <span className="mr-3">📦</span>
               <span>My Orders</span>
             </Link>
-            <Link to="/driver/map" style={navItemStyle("/driver/map")}>
+            <Link to="/driver/mapviewer" style={navItemStyle("/driver/mapviewer")}>
               <span className="mr-3">🗺️</span>
               <span>Live Map</span>
             </Link>

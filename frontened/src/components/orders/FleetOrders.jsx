@@ -5,9 +5,9 @@ import { Badge } from "../ui/badge";
 import { useEffect, useState } from "react";
 
 const FleetOrders = () => {
-  const { orders } = useSelector((state) => state.order);
-  const { drivers } = useSelector((state) => state.driver);
-  const { user } = useSelector((state) => state.auth);
+const orders = useSelector((state) => state.order?.orders) || [];
+const drivers = useSelector((state) => state.driver?.drivers) || [];
+const user = useSelector((state) => state.auth?.user);
   const [highlightedOrder, setHighlightedOrder] = useState(null);
 
  

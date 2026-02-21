@@ -1,9 +1,9 @@
-// Fleet Statistics Dashboard
 import { useSelector } from "react-redux";
 
 const FleetStats = () => {
-  const { drivers } = useSelector((state) => state.driver);
-  const { orders } = useSelector((state) => state.order);
+  
+  const drivers = useSelector((state) => state.driver?.drivers ?? []);
+  const orders = useSelector((state) => state.order?.orders ?? []);
 
   const stats = {
     totalDrivers: drivers.length,
@@ -11,7 +11,9 @@ const FleetStats = () => {
     onRouteDrivers: drivers.filter((d) => d.status === "on-route").length,
     totalOrders: orders.length,
     pendingOrders: orders.filter((o) => o.status === "pending").length,
-    inTransitOrders: orders.filter((o) => o.status === "in-transit" || o.status === "assigned").length,
+    inTransitOrders: orders.filter(
+      (o) => o.status === "in-transit" || o.status === "assigned"
+    ).length,
     deliveredOrders: orders.filter((o) => o.status === "delivered").length,
   };
 
@@ -35,7 +37,9 @@ const FleetStats = () => {
 
       <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
         <p className="text-sm text-orange-600 font-medium">In Transit</p>
-        <p className="text-2xl font-bold text-orange-700">{stats.inTransitOrders}</p>
+        <p className="text-2xl font-bold text-orange-700">
+          {stats.inTransitOrders}
+        </p>
         <p className="text-xs text-orange-500 mt-1">
           {stats.onRouteDrivers} drivers on route
         </p>
@@ -43,7 +47,9 @@ const FleetStats = () => {
 
       <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
         <p className="text-sm text-purple-600 font-medium">Delivered</p>
-        <p className="text-2xl font-bold text-purple-700">{stats.deliveredOrders}</p>
+        <p className="text-2xl font-bold text-purple-700">
+          {stats.deliveredOrders}
+        </p>
         <p className="text-xs text-purple-500 mt-1">Today</p>
       </div>
     </div>

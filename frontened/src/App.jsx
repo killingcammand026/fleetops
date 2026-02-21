@@ -12,6 +12,9 @@ import FleetDashboard from "./pages/fleet/FleetDashboard"
 import FleetDrivers from "./pages/fleet/FleetDrivers"
 import ProtectedRoute from "./components/ProtectedRoute"
 import CustomerCreateOrder from "./pages/customer/CustomerCreateOrder"
+import DriverMapViewer from './pages/driver/DriverMapViewer'
+import FleetOrdersViewer from './pages/fleet/FleetOrdersViewer'
+
 
 function App() {
   return (
@@ -32,8 +35,8 @@ function App() {
           element={<ProtectedRoute allowedRole="Driver"><DriverOrders /></ProtectedRoute>} 
         />
         <Route 
-          path="/driver/map" 
-          element={<ProtectedRoute allowedRole="Driver"><DriverDashboard /></ProtectedRoute>} 
+          path="/driver/mapviewer" 
+          element={<ProtectedRoute allowedRole="Driver"><DriverMapViewer /></ProtectedRoute>} 
         />
 
         {/* Customer Routes */}
@@ -63,15 +66,15 @@ function App() {
         {/* Fleet Manager Routes */}
         <Route 
           path="/fleet/users" 
-          element={<ProtectedRoute allowedRole="FleetManager"><FleetDashboard /></ProtectedRoute>} 
+          element={<ProtectedRoute allowedRole="Fleet Manager"><FleetDashboard /></ProtectedRoute>} 
         />
         <Route 
           path="/fleet/drivers" 
-          element={<ProtectedRoute allowedRole="FleetManager"><FleetDrivers /></ProtectedRoute>} 
+          element={<ProtectedRoute allowedRole="Fleet Manager"><FleetDrivers /></ProtectedRoute>} 
         />
         <Route 
           path="/fleet/orders" 
-          element={<ProtectedRoute allowedRole="FleetManager"><FleetDashboard /></ProtectedRoute>} 
+          element={<ProtectedRoute allowedRole="Fleet Manager"><FleetOrdersViewer /></ProtectedRoute>} 
         />
 
         {/* Catch all */}

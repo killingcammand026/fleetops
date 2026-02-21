@@ -17,7 +17,7 @@ const orderSlice = createSlice({
 
     setOrders: (state, action) => {
       state.loading = false;
-      state.orders = action.payload;
+      state.orders = Array.isArray(action.payload) ? action.payload : [];
     },
 
     addOrder: (state, action) => {
