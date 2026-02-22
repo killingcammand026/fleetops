@@ -11,9 +11,9 @@ const AssignDriverForm = ({ orderId }) => {
   const { drivers } = useSelector((state) => state.driver);
   const [loading, setLoading] = useState(false);
 
-  // Get available drivers
+  // Backend Driver: status "Available" | "On_Trip" | "Offline", isAvailable
   const availableDrivers = drivers.filter(
-    (d) => d.status === "available" && d.isActive
+    (d) => d.isAvailable !== false && (d.status === "Available" || d.status === "available")
   );
 
   const handleAssign = async (driverId) => {
@@ -63,7 +63,7 @@ const AssignDriverForm = ({ orderId }) => {
             <div>
               <p className="text-sm font-medium">{driver.name}</p>
               <p className="text-xs text-gray-500">
-                {driver.vehicle?.type} - {driver.vehicle?.plate}
+                {driver.vehicle?.type} - {driver.vehicle?.registrationNumber || driver.vehicle?.plate}
               </p>
             </div>
             <Button

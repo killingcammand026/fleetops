@@ -1,5 +1,6 @@
 import Driver from '../models/Driver.model.js';
-import User from "../models/User.model.js"
+import User from "../models/User.model.js";
+import Customer from "../models/Customer.model.js";
 export const createDriverService = async (driverData, loggedInUser) => {
 
   const user = await User.findById(driverData.userId);
@@ -21,8 +22,12 @@ export const createDriverService = async (driverData, loggedInUser) => {
 
   //Fleet Manager → can promote only Customers to Driver
   else if (loggedInUser.role==="Fleet Manager") {
-    if (user.role !== "Customer") {
-      throw new Error("Fleet Manager can only promote Customers to Driver");
+    // Align with frontend: Fleet Manager works with Customer profiles.
+    // Treat any user who has a Customer document as promotable,
+    // regardless of the current user.role value.
+    const customerProfile = await Customer.findOne({ userId: user._id });
+    if (!customerProfile) {
+      throw new Error("Customer profile not found for this user");
     }
     user.role = "Driver";
   }
@@ -61,6 +66,13 @@ export const updateDriverService = async (id, driverData) => {
         throw new Error('Driver not found');
     }
     return driver;
+};
+export const getDriverByUserIdService = async (userId) => {
+  const driver = await Driver.findOne({ userId });
+  if (!driver) {
+    throw new Error("Driver not found");
+  }
+  return driver;
 };
 export const deleteDriverService = async (driverId,loggedInUser) => {
     const driver=await Driver.findById(driverId);

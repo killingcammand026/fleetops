@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import { getAllDriversAPI } from "../../services/driverService";
-import { getAllUsersAPI } from "../../services/userService";
+import { getAllCustomersAPI } from "../../services/customerService";
 import { createDriverAPI } from "../../services/driverService";
 import { setDrivers, addDriver } from "../../redux/slices/driverSlice";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
@@ -26,38 +26,58 @@ const FleetDrivers = () => {
   userId: "",
   vehicleType: "Van",
   vehiclePlate: "",
+  phone: "",
 });
 
 
 const [customers, setCustomers] = useState([]);
-  
+
+// Backend expects userId = User document _id. Customer has userId (ref User). Normalize to string everywhere.
+const getCustomerUserId = (customer) => {
+  const u = customer?.userId;
+  if (u == null) return null;
+  if (typeof u === "string") return u.trim();
+  if (typeof u === "object" && u.$oid) return String(u.$oid);
+  const id = u._id ?? u;
+  return id != null ? String(id) : null;
+};
+
+// Normalize driver's userId for Set comparison (backend may return ObjectId or string)
+const getDriverUserId = (driver) => {
+  const u = driver?.userId;
+  if (u == null) return null;
+  if (typeof u === "string") return u.trim();
+  if (typeof u === "object" && u._id) return String(u._id);
+  return String(u);
+};
 
 useEffect(() => {
   const fetchData = async () => {
     try {
       const driverRes = await getAllDriversAPI();
-      const driverData = driverRes.data?.data || driverRes.data || [];
+      const driverData = Array.isArray(driverRes?.data) ? driverRes.data : (Array.isArray(driverRes) ? driverRes : []);
       dispatch(setDrivers(driverData));
 
-      const userRes = await getAllUsersAPI();
-      const allUsers = userRes.data?.data || userRes.data || [];
-
-      console.log("All Users:", allUsers);
-
-      const existingDriverUserIds = driverData.map(
-        (d) => d.userId
+      const existingDriverUserIds = new Set(
+        driverData.map((d) => getDriverUserId(d)).filter(Boolean)
       );
 
-      const customerUsers = allUsers.filter(
-        (u) =>
-          u.role === "Customer" &&
-          !existingDriverUserIds.includes(u._id)
+      let customerList = [];
+      try {
+        const customersRes = await getAllCustomersAPI();
+        customerList = Array.isArray(customersRes) ? customersRes : [];
+      } catch (e) {
+        customerList = [];
+      }
+
+      const availableCustomers = customerList.filter(
+        (c) => !existingDriverUserIds.has(String(getCustomerUserId(c) ?? ""))
       );
 
-      setCustomers(customerUsers);
-
+      setCustomers(availableCustomers);
     } catch (err) {
       console.error("Fetch error:", err);
+      setCustomers([]);
     }
   };
 
@@ -67,24 +87,43 @@ useEffect(() => {
   const handleSubmit = async (e) => {
   e.preventDefault();
 
-  if (!formData.userId || !formData.vehiclePlate) {
-    toast.error("Please select a customer and enter vehicle plate.");
+  if (!formData.userId || !formData.vehiclePlate || !formData.phone) {
+    toast.error("Please select a customer, enter vehicle plate and phone.");
     return;
   }
 
   setLoading(true);
 
   try {
+    const userIdForm = String((formData.userId || "").trim());
+    const selectedCustomer = customers.find(
+      (c) => String(getCustomerUserId(c) ?? "") === userIdForm
+    );
+    const userIdToSend = selectedCustomer
+      ? getCustomerUserId(selectedCustomer)
+      : userIdForm;
+    if (!userIdToSend) {
+      toast.error("Invalid customer selection. Please select a customer again.");
+      setLoading(false);
+      return;
+    }
+    // Backend Driver model: userId (User _id), name, phone, vehicle.type, vehicle.registrationNumber, liveLocation
     const driverData = {
-      userId: formData.userId,
+      userId: userIdToSend,
+      name: (selectedCustomer?.name || "Driver").trim(),
+      phone: formData.phone.trim(),
       vehicle: {
         type: formData.vehicleType,
-        plate: formData.vehiclePlate,
+        registrationNumber: formData.vehiclePlate.trim(),
+      },
+      liveLocation: {
+        type: "Point",
+        coordinates: [77.209, 28.6139],
       },
     };
 
     const result = await createDriverAPI(driverData);
-    const newDriver = result.data;
+    const newDriver = result.data ?? result;
 
     dispatch(addDriver(newDriver));
     toast.success("Driver profile created successfully!");
@@ -93,18 +132,33 @@ useEffect(() => {
       userId: "",
       vehicleType: "Van",
       vehiclePlate: "",
+      phone: "",
     });
 
   } catch (err) {
     console.error(err.response?.data || err);
-    toast.error(err.response?.data?.error || "Failed to add driver");
+    const msg = err.response?.data?.error || err.message || "Failed to add driver";
+    if (typeof msg === "string" && msg.includes("only promote Customers")) {
+      toast.error("Only users with Customer role can be promoted. Please select a customer from the list (not already a driver).");
+      // Refetch so dropdown excludes anyone who might already be a driver
+      try {
+        const [driverRes, customersRes] = await Promise.all([getAllDriversAPI(), getAllCustomersAPI()]);
+        const driverData = Array.isArray(driverRes?.data) ? driverRes.data : (Array.isArray(driverRes) ? driverRes : []);
+        dispatch(setDrivers(driverData));
+        const existingIds = new Set(driverData.map((d) => getDriverUserId(d)).filter(Boolean));
+        const customerList = Array.isArray(customersRes) ? customersRes : [];
+        setCustomers(customerList.filter((c) => !existingIds.has(String(getCustomerUserId(c) ?? ""))));
+      } catch (_) {}
+    } else {
+      toast.error(msg);
+    }
   } finally {
     setLoading(false);
   }
 };
 
   const availableCount = drivers.filter(
-    (d) => d.status === "available" && d.isActive !== false
+    (d) => d.isAvailable !== false && (d.status === "Available" || d.status === "available")
   ).length;
 
   return (
@@ -129,9 +183,10 @@ useEffect(() => {
   <CardContent className="pt-5">
     <form onSubmit={handleSubmit} className="space-y-4">
 
-      {/* Select Customer */}
+      {/* Select Customer - Fleet Manager can only promote users with Customer role */}
       <div>
         <Label>Select Customer</Label>
+        <p className="text-xs text-gray-500 mb-1">Only users with Customer role can be promoted to driver.</p>
         <Select
           value={formData.userId}
           onValueChange={(value) =>
@@ -142,11 +197,15 @@ useEffect(() => {
             <SelectValue placeholder="Select customer" />
           </SelectTrigger>
           <SelectContent>
-            {customers.map((user) => (
-              <SelectItem key={user._id} value={user._id}>
-                {user.name} ({user.email})
-              </SelectItem>
-            ))}
+            {customers.map((customer) => {
+              const userId = getCustomerUserId(customer);
+              if (!userId) return null;
+              return (
+                <SelectItem key={customer._id ?? userId} value={String(userId)}>
+                  {customer.name} {customer.phone ? `(${customer.phone})` : "(Customer)"}
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
       </div>
@@ -174,7 +233,7 @@ useEffect(() => {
 
       {/* Vehicle Plate */}
       <div>
-        <Label>Vehicle Plate</Label>
+        <Label>Vehicle Plate / Registration</Label>
         <Input
           value={formData.vehiclePlate}
           onChange={(e) =>
@@ -184,6 +243,19 @@ useEffect(() => {
             }))
           }
           placeholder="ABC-123"
+          required
+        />
+      </div>
+
+      {/* Phone (required by backend) */}
+      <div>
+        <Label>Phone</Label>
+        <Input
+          value={formData.phone}
+          onChange={(e) =>
+            setFormData((p) => ({ ...p, phone: e.target.value }))
+          }
+          placeholder="+1 234 567 8900"
           required
         />
       </div>

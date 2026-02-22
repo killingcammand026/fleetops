@@ -12,6 +12,7 @@ import {
   startLoading,
   loginSuccess,
   loginFailure,
+  resetLoginForm,
 } from "../../redux/slices/authSlice";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
@@ -29,7 +30,11 @@ const Login=()=>{
     const dispatch=useDispatch();
     const navigate=useNavigate();
     const {loading,error}=useSelector((state)=>state.auth);
-   
+
+    // Reset form state on mount so button shows "Login" and is clickable (fixes persisted loading: true)
+    React.useEffect(() => {
+        dispatch(resetLoginForm());
+    }, [dispatch]);
 
     const {register,
         handleSubmit,
@@ -144,23 +149,23 @@ const Login=()=>{
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-cyan-400 to-indigo-500 text-white font-semibold py-2 rounded-xl hover:scale-105 hover:shadow-lg hover:shadow-cyan-500/40 transition-all duration-300"
+              className="w-full bg-gradient-to-r from-cyan-400 to-indigo-500 text-white font-semibold py-2 rounded-xl hover:scale-105 hover:shadow-lg hover:shadow-cyan-500/40 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {loading ? "Logging in..." : "Login"}
             </Button>
 
-            {/* Register */}
-            <p className="text-center text-sm text-gray-300 mt-4">
+          </form>
+
+            {/* Register link outside form so it's always clickable and never triggers submit */}
+            <p className="text-center text-sm text-gray-300 mt-4 pt-2 border-t border-white/10">
               Don't have an account?{" "}
               <Link
                 to="/register"
-                className="text-cyan-300 font-semibold hover:text-white hover:underline transition"
+                className="text-cyan-300 font-semibold hover:text-white hover:underline transition cursor-pointer inline-block relative z-10 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-transparent rounded"
               >
                 Sign Up
               </Link>
             </p>
-
-          </form>
         </CardContent>
       </Card>
 

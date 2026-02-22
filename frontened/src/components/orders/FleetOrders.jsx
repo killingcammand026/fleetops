@@ -1,41 +1,70 @@
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import AssignDriverForm from "../../pages/fleet/AssignDriverForm";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { useEffect, useState } from "react";
+import { getAllOrdersAPI } from "../../services/orderService";
+import { getAllDriversAPI } from "../../services/driverService";
+import { setOrders } from "../../redux/slices/orderSlice";
+import { setDrivers } from "../../redux/slices/driverSlice";
+
+// Backend: CREATED, DRIVER_ASSIGNED, DRIVER_ACCEPTED, PICKED_UP, IN_TRANSIT, DELIVERED, CANCELLED
+const orderDriverId = (order) => {
+  const d = order.driver;
+  if (!d) return null;
+  return typeof d === "object" && d !== null ? d._id : d;
+};
 
 const FleetOrders = () => {
-const orders = useSelector((state) => state.order?.orders) || [];
-const drivers = useSelector((state) => state.driver?.drivers) || [];
-const user = useSelector((state) => state.auth?.user);
+  const dispatch = useDispatch();
+  const orders = useSelector((state) => state.order?.orders) || [];
+  const drivers = useSelector((state) => state.driver?.drivers) || [];
+  const user = useSelector((state) => state.auth?.user);
   const [highlightedOrder, setHighlightedOrder] = useState(null);
 
- 
-  const myOrders = orders.length > 0 
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const ordersData = await getAllOrdersAPI();
+        dispatch(setOrders(Array.isArray(ordersData) ? ordersData : []));
+        const driversRes = await getAllDriversAPI();
+        const driversList = Array.isArray(driversRes?.data) ? driversRes.data : (Array.isArray(driversRes) ? driversRes : []);
+        dispatch(setDrivers(driversList));
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    load();
+  }, [dispatch]);
+
+  const myOrders = orders.length > 0
     ? orders.filter((order) => !order.fleetManagerId || order.fleetManagerId === user?._id)
     : orders;
 
-  
   const sortedOrders = [...myOrders].sort((a, b) => {
-    if (a.status === "pending" && b.status !== "pending") return -1;
-    if (a.status !== "pending" && b.status === "pending") return 1;
-    return new Date(b.createdAt) - new Date(a.createdAt);
+    if (a.status === "CREATED" && b.status !== "CREATED") return -1;
+    if (a.status !== "CREATED" && b.status === "CREATED") return 1;
+    return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
   });
 
-  const pendingOrders = sortedOrders.filter((o) => o.status === "pending");
-  const activeOrders = sortedOrders.filter((o) => o.status === "assigned" || o.status === "in-transit");
+  const pendingOrders = sortedOrders.filter((o) => o.status === "CREATED");
+  const activeOrders = sortedOrders.filter((o) =>
+    ["DRIVER_ASSIGNED", "DRIVER_ACCEPTED", "PICKED_UP", "IN_TRANSIT"].includes(o.status)
+  );
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "pending":
+      case "CREATED":
         return "bg-yellow-100 text-yellow-800";
-      case "assigned":
+      case "DRIVER_ASSIGNED":
+      case "DRIVER_ACCEPTED":
+      case "PICKED_UP":
         return "bg-blue-100 text-blue-800";
-      case "in-transit":
+      case "IN_TRANSIT":
         return "bg-purple-100 text-purple-800";
-      case "delivered":
+      case "DELIVERED":
         return "bg-green-100 text-green-800";
-      case "cancelled":
+      case "CANCELLED":
         return "bg-red-100 text-red-800";
       default:
         return "bg-gray-100 text-gray-800";
@@ -44,8 +73,9 @@ const user = useSelector((state) => state.auth?.user);
 
   const getAssignedDriver = (orderId) => {
     const order = orders.find((o) => o._id === orderId);
-    if (!order?.assignedDriverId) return null;
-    return drivers.find((d) => d._id === order.assignedDriverId);
+    const driverId = order ? orderDriverId(order) : null;
+    if (!driverId) return null;
+    return drivers.find((d) => d._id === driverId || d._id?.toString() === driverId?.toString());
   };
 
   return (
@@ -97,7 +127,7 @@ const user = useSelector((state) => state.auth?.user);
                         <div className="flex justify-between items-start mb-3">
                           <div>
                             <h4 className="font-semibold text-lg">
-                              {order.customerName || "Customer"}
+                              {order.customer?.name ?? order.customerName ?? "Customer"}
                             </h4>
                             <p className="text-xs text-gray-500">
                               Order #{order._id.slice(-8).toUpperCase()} •{" "}
@@ -112,11 +142,11 @@ const user = useSelector((state) => state.auth?.user);
                         <div className="space-y-2 text-sm mb-3">
                           <div className="flex items-start">
                             <span className="font-medium text-gray-700 min-w-[80px]">Pickup:</span>
-                            <span className="text-gray-600">{order.pickupAddress}</span>
+                            <span className="text-gray-600">{order.pickupAddress || (order.pickupLocation?.coordinates && `Lat ${order.pickupLocation.coordinates[1]?.toFixed(4)}, Lng ${order.pickupLocation.coordinates[0]?.toFixed(4)}`) || "N/A"}</span>
                           </div>
                           <div className="flex items-start">
                             <span className="font-medium text-gray-700 min-w-[80px]">Delivery:</span>
-                            <span className="text-gray-600">{order.deliveryAddress}</span>
+                            <span className="text-gray-600">{order.deliveryAddress || (order.dropLocation?.coordinates && `Lat ${order.dropLocation.coordinates[1]?.toFixed(4)}, Lng ${order.dropLocation.coordinates[0]?.toFixed(4)}`) || "N/A"}</span>
                           </div>
                           {order.priority && (
                             <div className="flex items-center gap-2">
@@ -143,7 +173,7 @@ const user = useSelector((state) => state.auth?.user);
                             </p>
                             <p className="text-sm text-blue-700 mt-1">
                               {assignedDriver.name} • {assignedDriver.vehicle?.type} -{" "}
-                              {assignedDriver.vehicle?.plate}
+                              {assignedDriver.vehicle?.registrationNumber || assignedDriver.vehicle?.plate}
                             </p>
                           </div>
                         ) : (
@@ -173,7 +203,7 @@ const user = useSelector((state) => state.auth?.user);
                       >
                         <div className="flex justify-between items-start mb-3">
                           <div>
-                            <h4 className="font-semibold">{order.customerName || "Customer"}</h4>
+                            <h4 className="font-semibold">{order.customer?.name ?? order.customerName ?? "Customer"}</h4>
                             <p className="text-xs text-gray-500">
                               Order #{order._id.slice(-8).toUpperCase()}
                             </p>
@@ -184,10 +214,10 @@ const user = useSelector((state) => state.auth?.user);
                         </div>
                         <div className="text-sm space-y-1">
                           <p>
-                            <span className="font-medium">From:</span> {order.pickupAddress}
+                            <span className="font-medium">From:</span> {order.pickupAddress || (order.pickupLocation?.coordinates && `Lat ${order.pickupLocation.coordinates[1]?.toFixed(4)}, Lng ${order.pickupLocation.coordinates[0]?.toFixed(4)}`) || "N/A"}
                           </p>
                           <p>
-                            <span className="font-medium">To:</span> {order.deliveryAddress}
+                            <span className="font-medium">To:</span> {order.deliveryAddress || (order.dropLocation?.coordinates && `Lat ${order.dropLocation.coordinates[1]?.toFixed(4)}, Lng ${order.dropLocation.coordinates[0]?.toFixed(4)}`) || "N/A"}
                           </p>
                         </div>
                         {assignedDriver && (
@@ -196,7 +226,7 @@ const user = useSelector((state) => state.auth?.user);
                               <span className="font-medium">Driver:</span> {assignedDriver.name}
                             </p>
                             <p className="text-xs text-gray-600">
-                              {assignedDriver.vehicle?.type} - {assignedDriver.vehicle?.plate}
+                              {assignedDriver.vehicle?.type} - {assignedDriver.vehicle?.registrationNumber || assignedDriver.vehicle?.plate}
                             </p>
                           </div>
                         )}

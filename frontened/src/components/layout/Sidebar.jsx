@@ -2,7 +2,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../../redux/slices/authSlice";
 
-const Sidebar = ({ role }) => {
+const Sidebar = ({ role, isOpen = false, onClose }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -31,34 +31,52 @@ const Sidebar = ({ role }) => {
   });
 
   return (
-    <div className="w-64 bg-gray-900 text-white min-h-screen flex flex-col">
-      {/* Logo/Brand */}
-      <div className="p-6 border-b border-gray-800">
-        <h2 className="text-xl font-bold text-white">FleetOps</h2>
-        <p className="text-xs text-gray-400 mt-1">Fleet Management</p>
+    <div
+      className={`
+        w-64 bg-gray-900 text-white min-h-screen flex flex-col
+        fixed lg:static inset-y-0 left-0 z-40
+        transform transition-transform duration-200 ease-out
+        ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+      `}
+    >
+      {/* Logo/Brand + close on mobile */}
+      <div className="p-6 border-b border-gray-800 flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-white">FleetOps</h2>
+          <p className="text-xs text-gray-400 mt-1">Fleet Management</p>
+        </div>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="lg:hidden p-2 -m-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800"
+            aria-label="Close menu"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
       </div>
 
-      {/* User Info */}
+      {/* User: name and role */}
       <div className="p-4 border-b border-gray-800">
-        <p className="text-sm font-medium text-white">{user?.name || "User"}</p>
-        <p className="text-xs text-gray-400">{user?.email || ""}</p>
-        <span className="inline-block mt-2 px-2 py-1 text-xs bg-blue-600 rounded">
-          {role || "User"}
+        <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">Logged in as</p>
+        <p className="text-sm font-semibold text-white">{user?.name ?? "User"}</p>
+        <p className="text-xs text-gray-400 truncate" title={user?.email}>{user?.email ?? ""}</p>
+        <span className="inline-block mt-2 px-3 py-1 text-xs font-medium bg-blue-600 rounded-md text-white">
+          {role ?? "User"}
         </span>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 p-4">
+      {/* Navigation - close sidebar on link click (mobile) */}
+      <nav className="flex-1 p-4" onClick={onClose}>
         {role === "Admin" && (
           <>
             <Link to="/admin/users" style={navItemStyle("/admin/users")}>
               <span className="mr-3">📊</span>
               <span>Dashboard</span>
             </Link>
-            {/* <Link to="/admin/users" style={navItemStyle("/admin/users")}>
-              <span className="mr-3">👥</span>
-              <span>Manage Users</span>
-            </Link> */}
             <Link to="/admin/orders" style={navItemStyle("/admin/orders")}>
               <span className="mr-3">📦</span>
               <span>All Orders</span>
