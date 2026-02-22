@@ -12,6 +12,11 @@ export const getAllDriversAPI = async () => {
   return res;
 };
 
+export const getMyDriverAPI = async () => {
+  const res = await api.get(`${BASE}/me`);
+  return res;
+};
+
 export const getDriverByIdAPI = async (id) => {
   const res = await api.get(`${BASE}/${id}`);
   return res;

@@ -1,10 +1,12 @@
-import { createDriverService,
-    getAllDriversService,
-    getDriverByIdService,
-    updateDriverService,
-    deleteDriverService,
-    updateDriverLocationService,
- } from "../services/Driver.service.js";
+import {
+  createDriverService,
+  getAllDriversService,
+  getDriverByIdService,
+  updateDriverService,
+  deleteDriverService,
+  updateDriverLocationService,
+  getDriverByUserIdService,
+} from "../services/Driver.service.js";
 
  export const createDriverController = async (req, res) => {
     try {
@@ -46,6 +48,14 @@ import { createDriverService,
     catch (error) {
         res.status(400).json({ error: error.message });
     }
+    };
+    export const getMyDriverController = async (req, res) => {
+      try {
+        const driver = await getDriverByUserIdService(req.user._id);
+        res.status(200).json(driver);
+      } catch (error) {
+        res.status(404).json({ error: error.message });
+      }
     };
     export const deleteDriverController = async (req, res) => {
     try {

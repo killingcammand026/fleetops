@@ -59,12 +59,13 @@ const Sidebar = ({ role, isOpen = false, onClose }) => {
         )}
       </div>
 
-      {/* User Info */}
+      {/* User: name and role */}
       <div className="p-4 border-b border-gray-800">
-        <p className="text-sm font-medium text-white">{user?.name || "User"}</p>
-        <p className="text-xs text-gray-400">{user?.email || ""}</p>
-        <span className="inline-block mt-2 px-2 py-1 text-xs bg-blue-600 rounded">
-          {role || "User"}
+        <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">Logged in as</p>
+        <p className="text-sm font-semibold text-white">{user?.name ?? "User"}</p>
+        <p className="text-xs text-gray-400 truncate" title={user?.email}>{user?.email ?? ""}</p>
+        <span className="inline-block mt-2 px-3 py-1 text-xs font-medium bg-blue-600 rounded-md text-white">
+          {role ?? "User"}
         </span>
       </div>
 

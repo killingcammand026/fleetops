@@ -5,7 +5,7 @@ import {
 import { useDispatch } from "react-redux";
 import { deleteUser, updateUser, userError } from "../../redux/slices/userSlice";
 
-const UserTable = ({ users }) => {
+const UserTable = ({ users, onMakeDriver, refresh }) => {
   const dispatch = useDispatch();
 
   const handleDelete = async (id) => {
@@ -17,9 +17,13 @@ const UserTable = ({ users }) => {
     }
   };
 
-  const handleRoleChange = async (id, role) => {
+  const handleRoleChange = async (user, newRole) => {
+    if (newRole === "Driver") {
+      onMakeDriver?.(user);
+      return;
+    }
     try {
-      const updated = await updateUserRoleAPI(id, role);
+      const updated = await updateUserRoleAPI(user._id, newRole);
       dispatch(updateUser(updated));
     } catch (err) {
       dispatch(userError(err.response?.data?.error));
@@ -62,7 +66,7 @@ const UserTable = ({ users }) => {
                 <select
                   value={user.role}
                   onChange={(e) =>
-                    handleRoleChange(user._id, e.target.value)
+                    handleRoleChange(user, e.target.value)
                   }
                   className="px-4 py-2 bg-white border border-blue-400 
                   rounded-lg shadow-sm text-gray-700 font-medium

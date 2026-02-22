@@ -48,25 +48,27 @@ const authSlice=createSlice({
         registerSuccess:(state,action)=>{
             const token = action.payload.token;
             let decoded;
-            
             try {
                 decoded = jwtDecode(token);
             } catch (err) {
-                // If token decode fails, use the user data from response
                 decoded = action.payload.user || action.payload;
             }
+            const backendUser = action.payload.user || action.payload;
+            const role = backendUser?.role ?? decoded?.role ?? action.payload.role;
 
             state.loading = false;
             state.error = null;
             state.token = token;
-            state.user = decoded;
-            state.role = decoded.role || action.payload.role;
+            state.user = backendUser && (backendUser.name != null || backendUser.email != null)
+                ? { ...backendUser, id: backendUser._id ?? backendUser.id ?? decoded?.id, role }
+                : { ...decoded, name: decoded?.name, email: decoded?.email, role };
+            state.role = role;
             state.isAuthenticated = true;
 
             localStorage.setItem("token", token);
 
-            if (decoded.role === "Driver" || action.payload.role === "Driver") {
-                localStorage.setItem("driverId", decoded._id || action.payload.user?._id);
+            if (role === "Driver") {
+                localStorage.setItem("driverId", state.user._id ?? state.user.id ?? decoded?._id);
             }
         },
 
@@ -88,24 +90,26 @@ const authSlice=createSlice({
         loginSuccess: (state, action) => {
             const token = action.payload.token;
             let decoded;
-            
             try {
                 decoded = jwtDecode(token);
             } catch (err) {
-                // If token decode fails, use the user data from response
                 decoded = action.payload.user || action.payload;
             }
+            const backendUser = action.payload.user || action.payload;
+            const role = backendUser?.role ?? decoded?.role ?? action.payload.role;
 
             state.loading = false;
             state.token = token;
-            state.user = decoded || action.payload.user || action.payload;
-            state.role = decoded.role || action.payload.role;
+            state.user = backendUser && (backendUser.name != null || backendUser.email != null)
+                ? { ...backendUser, id: backendUser._id ?? backendUser.id ?? decoded?.id, role }
+                : { ...decoded, name: decoded?.name, email: decoded?.email, role };
+            state.role = role;
             state.isAuthenticated = true;
 
             localStorage.setItem("token", token);
 
-            if (decoded.role === "Driver" || action.payload.role === "Driver") {
-                localStorage.setItem("driverId", decoded._id || action.payload.user?._id);
+            if (role === "Driver") {
+                localStorage.setItem("driverId", state.user._id ?? state.user.id ?? decoded?._id);
             }
         },
 

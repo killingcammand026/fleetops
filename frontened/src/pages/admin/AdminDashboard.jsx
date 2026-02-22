@@ -12,8 +12,20 @@ import {
   getAllUsersAPI,
   createFleetManagerAPI,
 } from "../../services/userService";
-
+import { createDriverAPI } from "../../services/driverService";
 import UserTable from "./UserTable";
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
+import { toast } from "sonner";
 
 const AdminDashboard = () => {
   const dispatch = useDispatch();
@@ -26,6 +38,14 @@ const AdminDashboard = () => {
     email: "",
     password: "",
   });
+
+  const [driverFormUser, setDriverFormUser] = useState(null);
+  const [driverFormData, setDriverFormData] = useState({
+    vehicleType: "Van",
+    vehiclePlate: "",
+    phone: "",
+  });
+  const [driverFormLoading, setDriverFormLoading] = useState(false);
 
   const fetchUsers = async () => {
     try {
@@ -51,6 +71,41 @@ const AdminDashboard = () => {
       setFormData({ name: "", email: "", password: "" });
     } catch (err) {
       dispatch(userError(err.response?.data?.error || "Creation failed"));
+    }
+  };
+
+  const handleMakeDriver = (user) => {
+    setDriverFormUser(user);
+    setDriverFormData({ vehicleType: "Van", vehiclePlate: "", phone: "" });
+  };
+
+  const handleDriverFormSubmit = async (e) => {
+    e.preventDefault();
+    if (!driverFormUser) return;
+    if (!driverFormData.vehiclePlate?.trim() || !driverFormData.phone?.trim()) {
+      toast.error("Vehicle plate and phone are required.");
+      return;
+    }
+    setDriverFormLoading(true);
+    try {
+      const driverPayload = {
+        userId: driverFormUser._id,
+        name: driverFormUser.name || "Driver",
+        phone: driverFormData.phone.trim(),
+        vehicle: {
+          type: driverFormData.vehicleType,
+          registrationNumber: driverFormData.vehiclePlate.trim(),
+        },
+        liveLocation: { type: "Point", coordinates: [77.209, 28.6139] },
+      };
+      await createDriverAPI(driverPayload);
+      toast.success("Driver profile created. User role set to Driver.");
+      setDriverFormUser(null);
+      fetchUsers();
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to create driver profile.");
+    } finally {
+      setDriverFormLoading(false);
     }
   };
 
@@ -134,10 +189,10 @@ const AdminDashboard = () => {
         {/* User Table */}
         <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-md 
         hover:shadow-lg transition duration-300 w-full overflow-hidden">
-          <UserTable users={filteredUsers} refresh={fetchUsers} />
+          <UserTable users={filteredUsers} refresh={fetchUsers} onMakeDriver={handleMakeDriver} />
         </div>
 
-        {/* Modal */}
+        {/* Fleet Manager Modal */}
         {showForm && (
           <div className="fixed inset-0 flex items-center justify-center 
           bg-black/40 backdrop-blur-sm z-50 px-4">
@@ -207,6 +262,74 @@ const AdminDashboard = () => {
                 </button>
               </form>
             </div>
+          </div>
+        )}
+
+        {/* Driver form modal: when Admin sets role to Driver */}
+        {driverFormUser && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-50 px-4">
+            <Card className="w-full max-w-md">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Create Driver Profile</CardTitle>
+                <button
+                  type="button"
+                  onClick={() => setDriverFormUser(null)}
+                  className="text-gray-400 hover:text-red-500"
+                >
+                  ✖
+                </button>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-600 mb-4">
+                  Fill driver details for <strong>{driverFormUser.name}</strong> ({driverFormUser.email}). After saving, their role will be set to Driver.
+                </p>
+                <form onSubmit={handleDriverFormSubmit} className="space-y-4">
+                  <div>
+                    <Label>Vehicle Type</Label>
+                    <Select
+                      value={driverFormData.vehicleType}
+                      onValueChange={(v) => setDriverFormData((p) => ({ ...p, vehicleType: v }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Van">Van</SelectItem>
+                        <SelectItem value="Truck">Truck</SelectItem>
+                        <SelectItem value="Car">Car</SelectItem>
+                        <SelectItem value="Bike">Bike</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Vehicle Plate / Registration</Label>
+                    <Input
+                      value={driverFormData.vehiclePlate}
+                      onChange={(e) => setDriverFormData((p) => ({ ...p, vehiclePlate: e.target.value }))}
+                      placeholder="ABC-123"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label>Phone</Label>
+                    <Input
+                      value={driverFormData.phone}
+                      onChange={(e) => setDriverFormData((p) => ({ ...p, phone: e.target.value }))}
+                      placeholder="+91 9876543210"
+                      required
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" onClick={() => setDriverFormUser(null)} className="flex-1">
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={driverFormLoading} className="flex-1">
+                      {driverFormLoading ? "Creating..." : "Create Driver"}
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
           </div>
         )}
 

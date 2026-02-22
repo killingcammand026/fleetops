@@ -6,7 +6,7 @@ import {
   setCurrentDriver,
   driverError,
 } from "../../redux/slices/driverSlice";
-import { getDriverByIdAPI, getAllDriversAPI } from "../../services/driverService";
+import { getDriverByIdAPI, getAllDriversAPI, getMyDriverAPI } from "../../services/driverService";
 import { getAllOrdersAPI, updateStatusAPI, driverAcceptAPI } from "../../services/orderService";
 import { setOrders } from "../../redux/slices/orderSlice";
 import DriverMap from "./DriverMap";
@@ -56,7 +56,7 @@ const DriverDashboard = () => {
   const dispatch = useDispatch();
   const { currentDriver } = useSelector((state) => state.driver);
   const { orders } = useSelector((state) => state.order);
-  const { user } = useSelector((state) => state.auth);
+  const { user, role } = useSelector((state) => state.auth);
 
   const authUserId = localStorage.getItem("driverId") || user?.id || user?._id;
   const [effectiveDriverId, setEffectiveDriverId] = useState(authUserId);
@@ -67,21 +67,53 @@ const DriverDashboard = () => {
         dispatch(startLoading());
         let driverData = null;
 
-        // Backend Driver has userId (ref User). getDriverById expects Driver _id, so find driver by user id first.
-        const driversRes = await getAllDriversAPI();
-        const driversList = Array.isArray(driversRes?.data)
-          ? driversRes.data
-          : Array.isArray(driversRes)
-          ? driversRes
-          : [];
-        const driverByUserId = driversList.find(
-          (d) =>
-            (d.userId?._id && d.userId._id.toString() === authUserId?.toString()) ||
-            (d.userId && d.userId.toString() === authUserId?.toString())
-        );
-        if (driverByUserId) {
-          driverData = driverByUserId;
-          setEffectiveDriverId(driverByUserId._id);
+        // If logged-in role is Driver, use dedicated /drivers/me endpoint (real driver document).
+        if (role === "Driver") {
+          try {
+            const myRes = await getMyDriverAPI();
+            const myDriver = myRes?.data ?? myRes;
+            if (myDriver) {
+              driverData = myDriver;
+              setEffectiveDriverId(myDriver._id);
+            }
+          } catch (e) {
+            console.error("Failed to load driver via /drivers/me:", e);
+          }
+        }
+
+        // Fallbacks (e.g. for management views)
+        if (!driverData) {
+          // Backend Driver has userId (ref User). getDriverById expects Driver _id, so find driver by user id first.
+          try {
+            const driversRes = await getAllDriversAPI();
+            const driversList = Array.isArray(driversRes?.data)
+              ? driversRes.data
+              : Array.isArray(driversRes)
+              ? driversRes
+              : [];
+            const driverByUserId = driversList.find(
+              (d) =>
+                (d.userId?._id && d.userId._id.toString() === authUserId?.toString()) ||
+                (d.userId && d.userId.toString() === authUserId?.toString())
+            );
+            if (driverByUserId) {
+              driverData = driverByUserId;
+              setEffectiveDriverId(driverByUserId._id);
+            }
+
+            // Fallback: match by email (driver added by fleet manager)
+            if (!driverData && user?.email) {
+              const byEmail = driversList.find(
+                (d) => d.email?.toLowerCase() === user.email?.toLowerCase()
+              );
+              if (byEmail) {
+                driverData = byEmail;
+                setEffectiveDriverId(byEmail._id);
+              }
+            }
+          } catch (e) {
+            // ignore; handled below
+          }
         }
 
         // Fallback: try getDriverById with auth id (in case backend supports it)
@@ -91,17 +123,6 @@ const DriverDashboard = () => {
             driverData = result?.data ?? result;
             if (driverData) setEffectiveDriverId(driverData._id);
           } catch (_) {}
-        }
-
-        // Fallback: match by email (driver added by fleet manager)
-        if (!driverData && user?.email) {
-          const byEmail = driversList.find(
-            (d) => d.email?.toLowerCase() === user.email?.toLowerCase()
-          );
-          if (byEmail) {
-            driverData = byEmail;
-            setEffectiveDriverId(byEmail._id);
-          }
         }
 
         if (driverData) {
@@ -314,6 +335,8 @@ const DriverDashboard = () => {
        <div>
         You can see the Live Map from the sidebar to view your real-time location and route.
        </div>
+       {/* Start watching real driver location and push to backend */}
+       <LocationTracker />
       </div>
     </DashboardLayout>
   );
