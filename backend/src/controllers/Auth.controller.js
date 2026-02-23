@@ -2,11 +2,14 @@ import {
     registerService,
     loginService
 } from '../services/Auth.service.js';
+import bcrypt from "bcrypt";
 
 import admin from "../config/firebaseAdmin.js";
 import jwt from "jsonwebtoken";
 import User from "../models/User.model.js";
 import Customer from "../models/Customer.model.js";
+
+import { sendOtpMail } from "../utils/mail.js";
 
 export const googleAuthController = async (req, res) => {
   try {
@@ -88,3 +91,57 @@ export const loginController=async(req,res)=>{
         res.status(400).json({error:error.message});
     }
 };
+
+
+export const sendOtp=async (req,res)=>{
+    try{
+        const {email}=req.body;
+        const user=await User.findOne({email});
+        if(!user){
+            return res.status(404).json({message:"User not found"});
+        }
+        const otp=Math.floor(1000+Math.random()*9000).toString();
+        user.resetOtp=otp;
+        user.otpExpires=Date.now()+5*60*1000;
+        user.isOtpVerified=false;
+        await user.save();
+        await sendOtpMail(email,otp);
+        res.status(200).json({message:"OTP sent to email"});
+    }catch(error){
+        res.status(500).json({message:"Failed to send OTP"});
+    }
+}
+
+export const verifyOtp=async (req,res)=>{
+    try{
+        const {email,otp}=req.body;
+        const user=await User.findOne({email});
+        if(!user || user.resetOtp!==otp || user.otpExpires<Date.now()){
+            return res.status(404).json({message:"invalid or expired OTP"});
+        }
+        user.isOtpVerified=true;
+        user.resetOtp=undefined;
+        user.otpExpires=undefined;
+        await user.save();
+        res.status(200).json({message:"OTP verified successfully"});
+    }catch(error){
+        res.status(500).json({message:"Failed to verify OTP"}); 
+    }
+}
+
+export const resetPassword=async (req,res)=>{
+    try{
+        const {email,newPassword}=req.body;
+        const user=await User.findOne({email});
+        if(!user || !user.isOtpVerified){
+            return res.status(404).json({message:"User not found or OTP not verified"});
+        }
+        
+        user.password=newPassword;      //  this password will be hashed by pre-save hook in User model
+        user.isOtpVerified=false;
+        await user.save();
+        res.status(200).json({message:"Password reset successfully"});
+    }catch(error){
+        res.status(500).json({message:"Failed to reset password"});
+    }
+}

@@ -171,6 +171,10 @@ const Login=()=>{
               )}
             </div>
 
+            <div className="text-right mb-4  text-[#ff6e6e] hover:underline cursor-pointer text-sm font-medium" onClick={()=>navigate("/forgot-password")}>
+              Forgot password
+              </div>
+
             {/* Error */}
             {error && (
               <p className="text-red-300 text-center text-sm bg-red-500/20 p-2 rounded-lg">

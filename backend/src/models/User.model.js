@@ -33,7 +33,18 @@ const userSchema = new mongoose.Schema({
     isActive:{
         type:Boolean,
         default:true
+    },
+    resetOtp:{
+        type:String,
+    },
+    isOtpVerified:{
+        type:Boolean,
+        default:false
+    },
+    otpExpires:{
+        type:Date,
     }
+
 
 },{timestamps:true});
 

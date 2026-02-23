@@ -2,6 +2,7 @@ import './App.css'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Login from "./pages/auth/Login"
 import Register from "./pages/auth/Register"
+import ForgotPassword from "./pages/auth/ForgotPassword"
 import DriverDashboard from "./pages/driver/DriverDashboard"
 import DriverOrders from "./pages/driver/DriverOrders"
 import CustomerDashboard from "./pages/customer/CustomerDashboard"
@@ -24,6 +25,7 @@ function App() {
         <Route path="/" element={<Login />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+         <Route path="/forgot-password" element={<ForgotPassword />} />
 
         {/* Driver Routes */}
         <Route 
