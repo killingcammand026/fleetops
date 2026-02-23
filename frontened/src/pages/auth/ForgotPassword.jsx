@@ -5,6 +5,9 @@ import { IoArrowBack } from "react-icons/io5";
 import { Button } from "../../components/ui/button";
 import Register from "./Register";
 import api from "../../lib/axios";
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
 
 const ForgotPassword = () => {
     const [step,setStep]=useState(1);
@@ -63,23 +66,35 @@ const ForgotPassword = () => {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.05)_1px,transparent_0)] bg-[size:40px_40px]"></div>
 
 
-      <div className="relative z-10 bg-white rounded-xl shadow-lg w-full max-w-md p-8">
+      <Card className="relative z-10 w-[430px] backdrop-blur-2xl bg-white/10 border border-white/20 shadow-2xl rounded-3xl p-2 transition-all duration-500 hover:scale-[1.02]">
             <div className="flex items-center gap-4 mb-4">
                 <IoArrowBack
   size={30}
   className="text-[#1d11cb] cursor-pointer"
   onClick={() => navigate("/register")}
 />
-                <h1 className="text-2xl font-bold text-center text-[#1d11cb] ">Forgot Password</h1>
-            </div>
+</div>
+        <CardHeader>
+                  <CardTitle className="text-center text-3xl font-bold text-white tracking-wide">
+                    Forgot Password
+                  </CardTitle>
+                
+                </CardHeader>
+
+              
+                    <CardContent>
             {step==1 &&
             <div>
                 <div className="mb-6">
-                    <label htmlFor="email" className="block mb-1 font-medium text-gray-700">Email Address</label>
-                    <input
-                        type="email"
-                        id="email"
-                        className="w-full border-[1px] border-gray-200 rounded-lg px-3 py-2 focus:outline-none "
+                    <Label className="text-gray-200">Email</Label>
+                        <Input
+                                    type="email"
+                                    
+                                    className="mt-2 bg-white/25 border-white/40 text-white 
+                                    placeholder:text-white placeholder:opacity-80
+                                    focus:bg-white/35 focus:ring-2 focus:ring-cyan-400 
+                                    focus:shadow-[0_0_20px_rgba(34,211,238,0.4)]
+                                    transition-all duration-300"
                         placeholder="Enter your email"
                         onChange={(e)=>setEmail(e.target.value)} value={email}
                     />
@@ -94,12 +109,16 @@ const ForgotPassword = () => {
                 {step==2 &&
             <div>
                 <div className="mb-6">
-                    <label htmlFor="text" className="block mb-1 font-medium text-gray-700">OTP</label>
-                    <input
-                        type="text"
-                        id="text"
-                        className="w-full border-[1px] border-gray-200 rounded-lg px-3 py-2 focus:outline-none "
-                        placeholder="Enter OTP"
+                   <Label className="text-gray-200">OTP</Label>
+                        <Input
+                                    type="text"
+                                    
+                                    className="mt-2 bg-white/25 border-white/40 text-white 
+                                    placeholder:text-white placeholder:opacity-80
+                                    focus:bg-white/35 focus:ring-2 focus:ring-cyan-400 
+                                    focus:shadow-[0_0_20px_rgba(34,211,238,0.4)]
+                                    transition-all duration-300"
+                        placeholder="Enter your OTP"
                         onChange={(e)=>setOtp(e.target.value)} value={otp}
                     />
                     
@@ -114,21 +133,29 @@ const ForgotPassword = () => {
                      {step==3 &&
             <div>
                 <div className="mb-6">
-                    <label htmlFor="password" className="block mb-1 font-medium text-gray-700">New Password</label>
-                    <input
-                        type="password"
-                        id="password"
-                        className="w-full border-[1px] border-gray-200 rounded-lg px-3 py-2 focus:outline-none "
-                        placeholder="Enter new password"
+                   <Label className="text-gray-200">New Password</Label>
+                        <Input
+                                    type="password"
+                                    
+                                    className="mt-2 bg-white/25 border-white/40 text-white 
+                                    placeholder:text-white placeholder:opacity-80
+                                    focus:bg-white/35 focus:ring-2 focus:ring-cyan-400 
+                                    focus:shadow-[0_0_20px_rgba(34,211,238,0.4)]
+                                    transition-all duration-300"
+                        placeholder="Enter New Password"
                         onChange={(e)=>setNewPassword(e.target.value)} value={newPassword}
                     />
                     </div>
                      <div className="mb-6">
-                     <label htmlFor="password" className="block mb-1 font-medium text-gray-700">Confirm Password</label>
-                    <input
-                        type="password"
-                        id="password"
-                        className="w-full border-[1px] border-gray-200 rounded-lg px-3 py-2 focus:outline-none "
+                     <Label className="text-gray-200">Confirm Password</Label>
+                        <Input
+                                    type="password"
+                                    
+                                    className="mt-2 bg-white/25 border-white/40 text-white 
+                                    placeholder:text-white placeholder:opacity-80
+                                    focus:bg-white/35 focus:ring-2 focus:ring-cyan-400 
+                                    focus:shadow-[0_0_20px_rgba(34,211,238,0.4)]
+                                    transition-all duration-300"
                         placeholder="Enter Confirm Password"
                         onChange={(e)=>setConfirmPassword(e.target.value)} value={confirmPassword}
                     />
@@ -140,10 +167,14 @@ const ForgotPassword = () => {
 
 
 
+</CardContent>
+              </Card>
+
+
         </div>
 
 
-       </div>
+     
     )
 }
 
