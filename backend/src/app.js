@@ -12,7 +12,7 @@ import paymentRoutes from "./routes/Payment.routes.js"
 
 const app = express();
 app.use(cors({
-  origin:"http://localhost:5173",
+  origin:"http://localhost:5174",
   credentials:true
 }));
 app.use("/api/payment/webhook",

@@ -12,10 +12,18 @@ const userSchema = new mongoose.Schema({
         unique:true,
         lowercase:true,
     },
-    password:{
-        type:String,
-        required:true,
+    provider: {
+  type: String,
+  enum: ["local", "google"],
+  default: "local",
     },
+
+      password: {
+  type: String,
+  required: function () {
+    return this.provider === "local";
+  },
+},
     role:{
         type:String,
         enum:["Admin","Fleet Manager","Driver","Customer"],
