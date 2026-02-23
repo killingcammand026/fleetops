@@ -21,7 +21,7 @@ const updateCustomerAPI = async (id, data) => {
 };
 
 const updateCustomerLocationAPI = async (id, longitude, latitude) => {
-  const res = await api.patch(`/customers/${id}`, {
+  const res = await api.put(`/customers/${id}/location`, {
     longitude,
     latitude,
   });

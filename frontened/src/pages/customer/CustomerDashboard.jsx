@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import CreateOrderForm from "../../components/orders/CreateOrderForm";
@@ -12,6 +12,7 @@ import { getCustomerByIdAPI } from "../../services/customerService";
 import { getAllOrdersAPI } from "../../services/orderService";
 import { setOrders } from "../../redux/slices/orderSlice";
 import CustomerLocationUpdater from "./CustomerLocationUpdater";
+import CustomerLiveMap from "../../components/customer/CustomerLiveMap";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
 
@@ -19,7 +20,7 @@ const CustomerDashboard = () => {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
   const { currentCustomer, loading } = useSelector((state) => state.customer);
-const orders = useSelector((state) => state.order.orders) || [];
+  const orders = useSelector((state) => state.order.orders) || [];
   const [autoRefresh, setAutoRefresh] = useState(true);
 
 useEffect(() => {
@@ -61,24 +62,59 @@ useEffect(() => {
   }, [dispatch, autoRefresh]);
 
   
-  const myOrders = Array.isArray(orders)
-  ? orders.filter(
-      (order) => order.customerId === (user?.id || user?._id)
-    )
-  : [];
+  const safeOrders = useMemo(
+    () => (Array.isArray(orders) ? orders : []),
+    [orders]
+  );
 
-  // Sort orders: pending first, then by date
-  const sortedOrders = [...myOrders].sort((a, b) => {
-    if (a.status === "pending" && b.status !== "pending") return -1;
-    if (a.status !== "pending" && b.status === "pending") return 1;
-    return new Date(b.createdAt) - new Date(a.createdAt);
+  const myOrders = safeOrders.filter((order) => {
+    const customerRef = order.customer;
+    const customerFromRef =
+      customerRef && typeof customerRef === "object"
+        ? customerRef.userId || customerRef._id
+        : null;
+    const customerId =
+      customerFromRef ||
+      order.customerId ||
+      order.customer ||
+      order.customerId?._id;
+
+    const userId = user?._id || user?.id;
+    return customerId && userId && customerId.toString() === userId.toString();
   });
 
-  const pendingOrders = sortedOrders.filter((o) => o.status === "pending");
-  const activeOrders = sortedOrders.filter(
-    (o) => o.status === "assigned" || o.status === "in-transit"
-  );
-  const completedOrders = sortedOrders.filter((o) => o.status === "delivered");
+  // Backend statuses → logical buckets for UI
+  const statusForBucket = (rawStatus) => (rawStatus || "").toUpperCase();
+
+  const sortedOrders = [...myOrders].sort((a, b) => {
+    const sa = statusForBucket(a.status);
+    const sb = statusForBucket(b.status);
+
+    const isPendingA = sa === "CREATED" || sa === "DRIVER_ASSIGNED";
+    const isPendingB = sb === "CREATED" || sb === "DRIVER_ASSIGNED";
+    if (isPendingA !== isPendingB) return isPendingA ? -1 : 1;
+
+    return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+  });
+
+  const pendingOrders = sortedOrders.filter((o) => {
+    const s = statusForBucket(o.status);
+    return s === "CREATED" || s === "DRIVER_ASSIGNED";
+  });
+
+  const activeOrders = sortedOrders.filter((o) => {
+    const s = statusForBucket(o.status);
+    return (
+      s === "DRIVER_ACCEPTED" ||
+      s === "PICKED_UP" ||
+      s === "IN_TRANSIT"
+    );
+  });
+
+  const completedOrders = sortedOrders.filter((o) => {
+    const s = statusForBucket(o.status);
+    return s === "DELIVERED";
+  });
 
   return (
     <DashboardLayout>
@@ -283,6 +319,10 @@ useEffect(() => {
           </div>
         </div>
 
+        {/* Live customer & driver map for this customer's orders */}
+        <CustomerLiveMap />
+
+        {/* Background geolocation updater */}
         <CustomerLocationUpdater />
       </div>
 

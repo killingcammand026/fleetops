@@ -54,7 +54,7 @@ const statusDisplay = (status) => {
 
 const DriverDashboard = () => {
   const dispatch = useDispatch();
-  const { currentDriver } = useSelector((state) => state.driver);
+  const { currentDriver, error: driverLoadError } = useSelector((state) => state.driver);
   const { orders } = useSelector((state) => state.order);
   const { user, role } = useSelector((state) => state.auth);
 
@@ -67,98 +67,54 @@ const DriverDashboard = () => {
         dispatch(startLoading());
         let driverData = null;
 
-        // If logged-in role is Driver, use dedicated /drivers/me endpoint (real driver document).
-        if (role === "Driver") {
-          try {
-            const myRes = await getMyDriverAPI();
-            const myDriver = myRes?.data ?? myRes;
-            if (myDriver) {
-              driverData = myDriver;
-              setEffectiveDriverId(myDriver._id);
-            }
-          } catch (e) {
-            console.error("Failed to load driver via /drivers/me:", e);
+        // 1️⃣ Always try /drivers/me – now works for any authenticated user
+        try {
+          const myRes = await getMyDriverAPI();
+          const myDriver = myRes?.data ?? myRes;
+          if (myDriver && myDriver._id) {
+            driverData = myDriver;
+            setEffectiveDriverId(myDriver._id);
           }
+        } catch (e) {
+          console.error("Failed to load driver via /drivers/me:", e);
         }
 
-        // Fallbacks (e.g. for management views)
-        if (!driverData) {
-          // Backend Driver has userId (ref User). getDriverById expects Driver _id, so find driver by user id first.
-          try {
-            const driversRes = await getAllDriversAPI();
-            const driversList = Array.isArray(driversRes?.data)
-              ? driversRes.data
-              : Array.isArray(driversRes)
-              ? driversRes
-              : [];
-            const driverByUserId = driversList.find(
-              (d) =>
-                (d.userId?._id && d.userId._id.toString() === authUserId?.toString()) ||
-                (d.userId && d.userId.toString() === authUserId?.toString())
-            );
-            if (driverByUserId) {
-              driverData = driverByUserId;
-              setEffectiveDriverId(driverByUserId._id);
-            }
-
-            // Fallback: match by email (driver added by fleet manager)
-            if (!driverData && user?.email) {
-              const byEmail = driversList.find(
-                (d) => d.email?.toLowerCase() === user.email?.toLowerCase()
-              );
-              if (byEmail) {
-                driverData = byEmail;
-                setEffectiveDriverId(byEmail._id);
-              }
-            }
-          } catch (e) {
-            // ignore; handled below
-          }
-        }
-
-        // Fallback: try getDriverById with auth id (in case backend supports it)
+        // 2️⃣ If still no driver and we have an auth id, try direct lookup by driver id
         if (!driverData && authUserId) {
           try {
             const result = await getDriverByIdAPI(authUserId);
-            driverData = result?.data ?? result;
-            if (driverData) setEffectiveDriverId(driverData._id);
-          } catch (_) {}
+            const direct = result?.data ?? result;
+            if (direct && direct._id) {
+              driverData = direct;
+              setEffectiveDriverId(direct._id);
+            }
+          } catch (e) {
+            console.error("Failed to load driver via id:", e);
+          }
         }
 
         if (driverData) {
           dispatch(setCurrentDriver(driverData));
           setEffectiveDriverId(driverData._id);
-        } else if (user) {
-          const mockDriver = {
-            _id: authUserId,
-            name: user.name,
-            email: user.email,
-            status: "Available",
-            vehicle: { type: "Van", registrationNumber: "ABC-123" },
-            liveLocation: { coordinates: [77.209, 28.6139] },
-            isAvailable: true,
-          };
-          dispatch(setCurrentDriver(mockDriver));
-          setEffectiveDriverId(authUserId);
+        } else {
+          // Instead of creating a fake driver (which breaks status updates),
+          // surface a clear error that the driver profile is missing.
+          dispatch(
+            driverError(
+              "Driver profile not found. Please ask admin/fleet manager to create your driver profile."
+            )
+          );
         }
 
         const ordersData = await getAllOrdersAPI();
         dispatch(setOrders(Array.isArray(ordersData) ? ordersData : []));
       } catch (err) {
         console.error("Failed to load driver data:", err);
-        if (user) {
-          const mockDriver = {
-            _id: authUserId,
-            name: user.name,
-            email: user.email,
-            status: "Available",
-            vehicle: { type: "Van", registrationNumber: "ABC-123" },
-            liveLocation: { coordinates: [77.209, 28.6139] },
-            isAvailable: true,
-          };
-          dispatch(setCurrentDriver(mockDriver));
-          setEffectiveDriverId(authUserId);
-        }
+        dispatch(
+          driverError(
+            "Unable to load driver data. Please refresh or contact admin."
+          )
+        );
       }
     };
 
@@ -199,7 +155,9 @@ const DriverDashboard = () => {
     return (
       <DashboardLayout>
         <div className="p-6">
-          <div>Loading driver data...</div>
+          <div className="text-sm text-gray-600">
+            {driverLoadError || "Loading driver data..."}
+          </div>
         </div>
       </DashboardLayout>
     );
@@ -287,6 +245,13 @@ const DriverDashboard = () => {
                           <p>
                             <span className="font-medium">Delivery:</span> {deliveryDisplay(order)}
                           </p>
+                          {order.customer?.defaultLocation?.coordinates?.length >= 2 && (
+                            <p className="text-xs text-gray-500">
+                              <span className="font-medium">Customer location:</span>{" "}
+                              {order.customer.defaultLocation.coordinates[1].toFixed(4)},{" "}
+                              {order.customer.defaultLocation.coordinates[0].toFixed(4)}
+                            </p>
+                          )}
                         </div>
                         {status === "DRIVER_ASSIGNED" && (
                           <Button

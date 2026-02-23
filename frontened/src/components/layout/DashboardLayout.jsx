@@ -11,7 +11,7 @@ const DashboardLayout = ({ children }) => {
   return (
     <div className="flex min-h-screen w-full max-w-[100vw] bg-gray-50 overflow-x-hidden">
       <Sidebar role={role} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="flex-1 min-w-0 flex flex-col min-h-screen">
+      <div className="flex-1 min-w-0 flex flex-col min-h-screen lg:ml-64">
         <AppHeader />
         <main className="flex-1 min-w-0 w-full overflow-auto">
           <div className="lg:hidden fixed top-4 left-4 z-30">

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import { getAllOrdersAPI } from "../../services/orderService";
@@ -25,32 +25,61 @@ const CustomerOrders = () => {
     fetchOrders();
   }, [dispatch]);
 
-  // Filter orders for this customer
- const safeOrders = Array.isArray(orders) ? orders : [];
+  const safeOrders = useMemo(
+    () => (Array.isArray(orders) ? orders : []),
+    [orders]
+  );
 
-const myOrders = safeOrders.filter((order) => {
-  const customerId =
-    typeof order.customerId === "object"
-      ? order.customerId._id
-      : order.customerId;
-
-  return customerId?.toString() === user?._id?.toString();
-});
-
-  const getStatusColor = (status) => {
+  // Backend statuses: CREATED, DRIVER_ASSIGNED, DRIVER_ACCEPTED, PICKED_UP, IN_TRANSIT, DELIVERED, CANCELLED
+  const statusBadgeColor = (rawStatus) => {
+    const status = (rawStatus || "").toUpperCase();
     switch (status) {
-      case "pending":
+      case "CREATED":
         return "bg-yellow-100 text-yellow-800";
-      case "assigned":
+      case "DRIVER_ASSIGNED":
+      case "DRIVER_ACCEPTED":
+      case "PICKED_UP":
         return "bg-blue-100 text-blue-800";
-      case "in-transit":
+      case "IN_TRANSIT":
         return "bg-purple-100 text-purple-800";
-      case "delivered":
+      case "DELIVERED":
         return "bg-green-100 text-green-800";
+      case "CANCELLED":
+        return "bg-red-100 text-red-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
   };
+
+  const prettyStatus = (rawStatus) => {
+    const status = (rawStatus || "").toUpperCase();
+    const map = {
+      CREATED: "created",
+      DRIVER_ASSIGNED: "assigned",
+      DRIVER_ACCEPTED: "driver accepted",
+      PICKED_UP: "picked up",
+      IN_TRANSIT: "in transit",
+      DELIVERED: "delivered",
+      CANCELLED: "cancelled",
+    };
+    return map[status] || rawStatus || "unknown";
+  };
+
+  const myOrders = safeOrders.filter((order) => {
+    const customerRef = order.customer;
+    const customerFromRef =
+      customerRef && typeof customerRef === "object"
+        ? customerRef.userId || customerRef._id
+        : null;
+    const customerId =
+      customerFromRef ||
+      order.customerId ||
+      order.customer ||
+      order.customerId?._id;
+
+    const userId = user?._id || user?.id;
+    return customerId && userId && customerId.toString() === userId.toString();
+  });
 
   return (
     <DashboardLayout>
@@ -88,23 +117,38 @@ const myOrders = safeOrders.filter((order) => {
                           {new Date(order.createdAt).toLocaleDateString()}
                         </p>
                       </div>
-                      <Badge className={getStatusColor(order.status)}>
-                        {order.status}
+                      <Badge className={statusBadgeColor(order.status)}>
+                        {prettyStatus(order.status)}
                       </Badge>
                     </div>
                     <div className="space-y-2 text-sm">
                       <div>
                         <span className="font-medium">From:</span>{" "}
-                        {order.pickupAddress}
+                        {order.pickupAddress ||
+                          (order.pickupLocation?.coordinates &&
+                            `Lat ${order.pickupLocation.coordinates[1]?.toFixed(
+                              4
+                            )}, Lng ${order.pickupLocation.coordinates[0]?.toFixed(
+                              4
+                            )}`) ||
+                          "N/A"}
                       </div>
                       <div>
                         <span className="font-medium">To:</span>{" "}
-                        {order.deliveryAddress}
+                        {order.deliveryAddress ||
+                          (order.dropLocation?.coordinates &&
+                            `Lat ${order.dropLocation.coordinates[1]?.toFixed(
+                              4
+                            )}, Lng ${order.dropLocation.coordinates[0]?.toFixed(
+                              4
+                            )}`) ||
+                          "N/A"}
                       </div>
-                      {order.assignedDriverId && (
+                      {order.driver && (
                         <div className="mt-2 p-2 bg-blue-50 rounded border border-blue-200">
                           <p className="text-xs text-blue-600">
-                            Driver assigned - Order in progress
+                            Driver assigned:{" "}
+                            {order.driver.name || "Driver"}
                           </p>
                         </div>
                       )}
