@@ -373,7 +373,7 @@ export const assignDriverService = async (orderId) => {
         order.driver = nearestDriver._id;
         order.status = "DRIVER_ASSIGNED";
         order.statusHistory.push({
-           status:newStatus,
+           status:"DRIVER_ASSIGNED",
             updatedAt:new Date()
          })
 
