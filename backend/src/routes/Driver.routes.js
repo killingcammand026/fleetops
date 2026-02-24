@@ -17,18 +17,18 @@ import {
 
 const router=express.Router();
 
-router.get(
-  "/me",
-  protect,
-  authorizeRoles(["Driver"]),
-  getMyDriverController
-);
+router.get("/me", protect, getMyDriverController);
 
 router.post("/",protect,authorizeRoles(["Admin","Fleet Manager"]),createDriverController);
 router.get("/",protect,authorizeRoles(["Admin","Fleet Manager"]),getAllDriversController);
 router.get("/:id",protect,allowDriverSelfOrManagement,getDriverByIdController);
 router.put("/:id",protect,allowDriverSelfOrManagement,updateDriverController);
 router.delete("/:id",protect,authorizeRoles(["Admin"]),deleteDriverController);
-router.put("/:id/location",protect,authorizeRoles(["Driver"]),allowDriverSelfOrManagement,updateDriverLocationController);
+router.put(
+  "/:id/location",
+  protect,
+  allowDriverSelfOrManagement,
+  updateDriverLocationController
+);
 
 export default router;

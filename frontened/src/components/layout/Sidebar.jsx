@@ -33,8 +33,8 @@ const Sidebar = ({ role, isOpen = false, onClose }) => {
   return (
     <div
       className={`
-        w-64 bg-gray-900 text-white min-h-screen flex flex-col
-        fixed lg:static inset-y-0 left-0 z-40
+        w-64 bg-gray-900 text-white h-screen flex flex-col
+        fixed inset-y-0 left-0 z-40
         transform transition-transform duration-200 ease-out
         ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
       `}
@@ -70,7 +70,7 @@ const Sidebar = ({ role, isOpen = false, onClose }) => {
       </div>
 
       {/* Navigation - close sidebar on link click (mobile) */}
-      <nav className="flex-1 p-4" onClick={onClose}>
+      <nav className="flex-1 p-4 overflow-y-auto" onClick={onClose}>
         {role === "Admin" && (
           <>
             <Link to="/admin/users" style={navItemStyle("/admin/users")}>

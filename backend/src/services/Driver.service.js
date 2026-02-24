@@ -43,11 +43,16 @@ export const createDriverService = async (driverData, loggedInUser) => {
   return driver;
 };
 export const getAllDriversService = async () => {
-    const driver=await Driver.find();
-    if(!driver || driver.length === 0) {
-        throw new Error('Drivers not found');
-    }
-    return driver;
+  // Only treat drivers whose linked User still exists and has role "Driver"
+  const drivers = await Driver.find().populate("userId");
+  if (!drivers || drivers.length === 0) {
+    return [];
+  }
+  return drivers.filter(
+    (d) =>
+      d.userId &&
+      (d.userId.role === "Driver" || d.userId.role === "driver")
+  );
 };
 export const getDriverByIdService = async (id) => {
     const driver=await Driver.findById(id);

@@ -21,7 +21,7 @@ import {
 const router=express.Router();
 
 router.post("/",protect,authorizeRoles(["Customer"]),createOrderController);
-router.get("/",protect,authorizeRoles(["Admin","Fleet Manager"]),getAllOrdersController);
+router.get("/",protect,authorizeRoles(["Admin","Fleet Manager","Driver","Customer"]),getAllOrdersController);
 router.get("/:id",protect,allowOrderCustomerSelfOrManagement,getOrderByIdController);
 router.put("/:id",protect,allowOrderCustomerSelfOrManagement,updateOrderController);
 router.delete("/:id",protect,authorizeRoles(["Admin"]),deleteOrderController);

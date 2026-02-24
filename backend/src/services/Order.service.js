@@ -79,14 +79,40 @@ const dropLon = Number(dropLongitude);
     }
     return order;
 };
-export const getAllOrdersService=async()=>{
-    const orders=await Order.find()
-    .populate("customer")
-    .populate("driver");
-    if(!orders){
-        throw new Error("Failed to fetch orders");
+export const getAllOrdersService = async (loggedInUser) => {
+  let filter = {};
+
+  if (loggedInUser.role === "Customer") {
+    const customer = await Customer.findOne({ userId: loggedInUser.id });
+    if (!customer) {
+      return [];
     }
-    return orders;
+    filter = { customer: customer._id };
+  } else if (loggedInUser.role === "Driver") {
+    const driver = await Driver.findOne({ userId: loggedInUser._id });
+    if (!driver) {
+      return [];
+    }
+    filter = { driver: driver._id };
+  } else if (
+    loggedInUser.role === "Admin" ||
+    loggedInUser.role === "Fleet Manager"
+  ) {
+    // no additional filter
+    filter = {};
+  } else {
+    return [];
+  }
+
+  const orders = await Order.find(filter)
+    .populate("customer")
+    .populate("driver")
+    .sort({ createdAt: -1 });
+
+  if (!orders) {
+    throw new Error("Failed to fetch orders");
+  }
+  return orders;
 };
 export const getOrderByIdService=async(orderId)=>{
     const order=await Order.findById(orderId)
@@ -123,7 +149,7 @@ export const updateOrderService=async(orderId,updateData,loggedInUser)=>{
             "status"
         ];
     }
-    // 🔥 ADD STATUS VALIDATION HERE
+  
         if (updateData.status) {
 
             const allowedTransitions = {
@@ -338,34 +364,49 @@ export const assignDriverService = async (orderId) => {
             return order;
         }
 
-        const nearestDriver = await Driver.findOne({
-            _id: { $nin: order.rejectedDrivers || []},
-            isAvailable: true,
-            liveLocation: {
-                $near: {
-                    $geometry: {
-                        type: "Point",
-                        coordinates: order.pickupLocation.coordinates
-                    },
-                    $maxDistance: Number(process.env.maxDistance)
-                }
-            }
+        let nearestDriver = await Driver.findOne({
+          _id: { $nin: order.rejectedDrivers || [] },
+          $or: [
+            { isAvailable: true },
+            { status: "Available" },
+          ],
+          liveLocation: {
+            $near: {
+              $geometry: {
+                type: "Point",
+                coordinates: order.pickupLocation.coordinates,
+              },
+              $maxDistance: Number(process.env.maxDistance),
+            },
+          },
         }).session(session);
 
+        // Fallback: if no driver has liveLocation yet (e.g. new system),
+        // just pick any available/\"Available\" driver so assignment still works.
         if (!nearestDriver) {
-            order.status = "CANCELLED";
-            await order.save({ session });
-
-            await session.commitTransaction();
-            session.endSession();
-
-            if(io){
-            io.to(`order_${orderId}`).emit("orderCancelled", {
-                orderId: order._id,
-                reason: "No available drivers nearby"
-            });
+          nearestDriver = await Driver.findOne({
+            _id: { $nin: order.rejectedDrivers || [] },
+            $or: [
+              { isAvailable: true },
+              { status: "Available" },
+            ],
+          }).session(session);
         }
-            return order;
+
+        if (!nearestDriver) {
+          order.status = "CANCELLED";
+          await order.save({ session });
+
+          await session.commitTransaction();
+          session.endSession();
+
+          if (io) {
+            io.to(`order_${orderId}`).emit("orderCancelled", {
+              orderId: order._id,
+              reason: "No available drivers nearby",
+            });
+          }
+          return order;
         }
 
         // ✅ increment AFTER validation
@@ -375,7 +416,7 @@ export const assignDriverService = async (orderId) => {
         order.statusHistory.push({
            status:"DRIVER_ASSIGNED",
             updatedAt:new Date()
-         })
+         });
 
         nearestDriver.isAvailable = false;
 

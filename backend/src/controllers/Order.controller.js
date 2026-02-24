@@ -14,28 +14,35 @@ import {
 } from '../services/Order.service.js';
 
 
-    export const createOrderController = async (req, res) => {
+export const createOrderController = async (req, res) => {
+  try {
+    const order = await createOrderService(req.body, req.user);
+
+    // Immediately attempt to assign nearest available driver.
+    // If this fails (no drivers, geo error, etc.), we still return the order as CREATED.
     try {
-        const order = await createOrderService(req.body,req.user);
-        res.status(201).json(order);
+      await assignDriverService(order._id.toString());
+    } catch (assignErr) {
+      console.error("Auto-assign driver failed:", assignErr.message || assignErr);
     }
-    catch (error) {       
-         res.status(400).json({ error: error.message });
-    }
-    };
-    export const getAllOrdersController = async (req, res) => {
-    try{
-        const orders = await getAllOrdersService();
-        res.status(200).json({
-            success:true,
-            count:orders.length,
-            data:orders
-        });
-    }
-    catch (error) {
-        res.status(400).json({ error: error.message });
-    }
-    };
+
+    res.status(201).json(order);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+export const getAllOrdersController = async (req, res) => {
+  try {
+    const orders = await getAllOrdersService(req.user);
+    res.status(200).json({
+      success: true,
+      count: orders.length,
+      data: orders,
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
     export const getOrderByIdController = async (req, res) => {
     try {
         const order = await getOrderByIdService(req.params.id);

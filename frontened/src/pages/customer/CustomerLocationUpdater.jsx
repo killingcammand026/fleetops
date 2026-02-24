@@ -1,10 +1,6 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  startLoading,
-  setCustomer,
-  customerError,
-} from "../../redux/slices/customerSlice";
+import { startLoading, setCustomer, customerError } from "../../redux/slices/customerSlice";
 import { updateCustomerLocationAPI } from "../../services/customerService";
 
 const CustomerLocationUpdater = () => {
@@ -12,36 +8,46 @@ const CustomerLocationUpdater = () => {
   const { user } = useSelector((state) => state.auth);
 
 
-  const updateLocation=() => {
-    navigator.geolocation.getCurrentPosition(
+  useEffect(() => {
+    if (!user) return;
+
+    if (!navigator.geolocation) {
+      return;
+    }
+
+    const watchId = navigator.geolocation.watchPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
-
         try {
-            dispatch(startLoading());
-            const updated  = await updateCustomerLocationAPI(user.id, { latitude, longitude });
-            dispatch(setCustomer(updated ));
-            alert("Location updated successfully");
+          dispatch(startLoading());
+          const updated = await updateCustomerLocationAPI(
+            user.id || user._id,
+            longitude,
+            latitude
+          );
+          dispatch(setCustomer(updated));
+        } catch (err) {
+          dispatch(
+            customerError(
+              err.response?.data?.message ||
+                "Failed to update location"
+            )
+          );
         }
-        catch (err) {
-            dispatch(customerError(err.response?.data?.message || "Failed to update location"));
-        }
-    },
-     (error) => {
-        alert("Location permission denied");
+      },
+      (error) => {
+        console.warn("Customer location permission denied:", error);
       }
     );
-  };
 
-   return (
-    <button
-      onClick={updateLocation}
-      className="bg-blue-500 text-white px-4 py-2 rounded"
-    >
-      Update My Location
-    </button>
-  );
+    return () => {
+      if (watchId != null) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+    };
+  }, [dispatch, user]);
+
+  return null;
 };
 
 export default CustomerLocationUpdater;
-

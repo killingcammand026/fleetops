@@ -7,12 +7,15 @@ import {
   addUser,
   userError,
 } from "../../redux/slices/userSlice";
+import { setDrivers } from "../../redux/slices/driverSlice";
+import { setOrders } from "../../redux/slices/orderSlice";
 
 import {
   getAllUsersAPI,
   createFleetManagerAPI,
 } from "../../services/userService";
-import { createDriverAPI } from "../../services/driverService";
+import { createDriverAPI, getAllDriversAPI } from "../../services/driverService";
+import { getAllOrdersAPI } from "../../services/orderService";
 import UserTable from "./UserTable";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
@@ -29,7 +32,11 @@ import { toast } from "sonner";
 
 const AdminDashboard = () => {
   const dispatch = useDispatch();
-  const { users, loading, error } = useSelector((state) => state.user);
+  const { users, loading, error, fleetManagers } = useSelector(
+    (state) => state.user
+  );
+  const drivers = useSelector((state) => state.driver?.drivers ?? []);
+  const orders = useSelector((state) => state.order?.orders ?? []);
 
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -50,15 +57,39 @@ const AdminDashboard = () => {
   const fetchUsers = async () => {
     try {
       dispatch(startLoading());
-      const data = await getAllUsersAPI();
-      dispatch(setUsers(Array.isArray(data) ? data : []));
+      const [usersRes, driverRes, ordersRes] = await Promise.all([
+        getAllUsersAPI(),
+        getAllDriversAPI(),
+        getAllOrdersAPI(),
+      ]);
+
+      dispatch(setUsers(Array.isArray(usersRes) ? usersRes : []));
+
+      const driverData = Array.isArray(driverRes?.data)
+        ? driverRes.data
+        : Array.isArray(driverRes)
+        ? driverRes
+        : [];
+
+      const ordersData =
+        Array.isArray(ordersRes?.data?.data) || Array.isArray(ordersRes?.data)
+          ? ordersRes.data.data || ordersRes.data
+          : Array.isArray(ordersRes)
+          ? ordersRes
+          : [];
+
+      dispatch(setDrivers(driverData));
+      dispatch(setOrders(ordersData));
     } catch (err) {
-      dispatch(userError(err.response?.data?.error || "Failed to load users"));
+      dispatch(
+        userError(err.response?.data?.error || "Failed to load admin data")
+      );
     }
   };
 
   useEffect(() => {
     fetchUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleCreateFleetManager = async (e) => {
@@ -115,6 +146,45 @@ const AdminDashboard = () => {
       user.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Driver & order stats
+  const driverStats = {
+    total: drivers.length,
+    available: drivers.filter(
+      (d) =>
+        d.status?.toLowerCase() === "available" ||
+        d.isAvailable === true
+    ).length,
+    onTrip: drivers.filter((d) =>
+      (d.status || "").toLowerCase().includes("on_trip")
+    ).length,
+  };
+
+  const orderStats = {
+    total: orders.length,
+    created: orders.filter((o) => o.status === "CREATED").length,
+    inProgress: orders.filter((o) =>
+      ["DRIVER_ASSIGNED", "DRIVER_ACCEPTED", "PICKED_UP", "IN_TRANSIT"].includes(
+        o.status
+      )
+    ).length,
+    delivered: orders.filter((o) => o.status === "DELIVERED").length,
+  };
+
+  // Map: fleetManagerId -> driver count
+  const driversPerFleet = drivers.reduce((acc, d) => {
+    const fmId = d.fleetManagerId?.toString?.() || d.fleetManagerId;
+    if (!fmId) return acc;
+    acc[fmId] = (acc[fmId] || 0) + 1;
+    return acc;
+  }, {});
+
+  const fleetOverview = (fleetManagers || []).map((fm) => ({
+    _id: fm._id,
+    name: fm.name,
+    email: fm.email,
+    driverCount: driversPerFleet[fm._id?.toString?.()] || 0,
+  }));
+
   return (
     <DashboardLayout>
       <div className="w-full min-h-screen px-4 sm:px-6 lg:px-10 py-6 space-y-8">
@@ -126,15 +196,35 @@ const AdminDashboard = () => {
               Admin Dashboard
             </h1>
             <p className="text-gray-500">
-              Manage fleet managers and system users
+              Full control over users, drivers, fleet managers and orders
             </p>
           </div>
 
-          {/* Stats Card */}
-          <div className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-blue-700 
-          text-white px-6 py-4 rounded-2xl shadow-lg">
-            <p className="text-sm opacity-80">Total Users</p>
-            <h2 className="text-2xl font-bold">{users?.length || 0}</h2>
+          {/* Stats */}
+          <div className="flex flex-wrap gap-4 w-full sm:w-auto">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-5 py-4 rounded-2xl shadow-lg min-w-[160px]">
+              <p className="text-sm opacity-80">Total Users</p>
+              <h2 className="text-2xl font-bold">{users?.length || 0}</h2>
+            </div>
+            <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-5 py-4 rounded-2xl shadow-lg min-w-[160px]">
+              <p className="text-sm opacity-80">Drivers</p>
+              <h2 className="text-xl font-semibold">
+                {driverStats.total}{" "}
+                <span className="text-xs font-normal">
+                  ({driverStats.available} available / {driverStats.onTrip} on trip)
+                </span>
+              </h2>
+            </div>
+            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-5 py-4 rounded-2xl shadow-lg min-w-[160px]">
+              <p className="text-sm opacity-80">Orders</p>
+              <h2 className="text-xl font-semibold">
+                {orderStats.total}{" "}
+                <span className="text-xs font-normal">
+                  ({orderStats.created} created / {orderStats.inProgress} in progress /{" "}
+                  {orderStats.delivered} delivered)
+                </span>
+              </h2>
+            </div>
           </div>
         </div>
 
@@ -186,10 +276,99 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* User Table */}
-        <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-md 
-        hover:shadow-lg transition duration-300 w-full overflow-hidden">
-          <UserTable users={filteredUsers} refresh={fetchUsers} onMakeDriver={handleMakeDriver} />
+        {/* Users + system overview */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
+          {/* User Table */}
+          <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-md hover:shadow-lg transition duration-300 w-full overflow-hidden xl:col-span-2">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold text-gray-800 text-lg">All Users</h2>
+              <p className="text-xs text-gray-500">
+                Roles control access. Driver & fleet stats update in real time from backend.
+              </p>
+            </div>
+            <UserTable
+              users={filteredUsers}
+              refresh={fetchUsers}
+              onMakeDriver={handleMakeDriver}
+            />
+          </div>
+
+          {/* Fleet Manager / Driver summary */}
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">Drivers by Fleet Manager</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm max-h-[260px] overflow-auto">
+                {fleetOverview.length === 0 ? (
+                  <p className="text-gray-500">No fleet managers yet.</p>
+                ) : (
+                  fleetOverview.map((fm) => (
+                    <div
+                      key={fm._id}
+                      className="flex items-center justify-between border-b last:border-b-0 py-2"
+                    >
+                      <div>
+                        <p className="font-medium text-gray-900">{fm.name}</p>
+                        <p className="text-xs text-gray-500">{fm.email}</p>
+                      </div>
+                      <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-semibold">
+                        {fm.driverCount} driver{fm.driverCount === 1 ? "" : "s"}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">Live Driver Status</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1 text-xs max-h-[220px] overflow-auto">
+                {drivers.length === 0 ? (
+                  <p className="text-gray-500">No drivers yet.</p>
+                ) : (
+                  drivers.map((d) => (
+                    <div
+                      key={d._id}
+                      className="flex items-center justify-between border-b last:border-b-0 py-1.5"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium text-gray-900 truncate">
+                          {d.name}{" "}
+                          <span className="text-[10px] text-gray-500">
+                            ({d.vehicle?.type ?? "Vehicle"})
+                          </span>
+                        </p>
+                        <p className="text-[11px] text-gray-500 truncate">
+                          {d.phone}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p
+                          className={`text-[11px] font-semibold ${
+                            (d.status || "").toLowerCase() === "available"
+                              ? "text-emerald-600"
+                              : (d.status || "").toLowerCase().includes("on_trip")
+                              ? "text-amber-600"
+                              : "text-gray-500"
+                          }`}
+                        >
+                          {d.status ?? "Offline"}
+                        </p>
+                        {typeof d.isAvailable === "boolean" && (
+                          <p className="text-[10px] text-gray-400">
+                            Pool: {d.isAvailable ? "Available" : "Busy"}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         {/* Fleet Manager Modal */}

@@ -4,6 +4,11 @@ import { useNavigate, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+
+import { FcGoogle } from "react-icons/fc";
+import { signInWithPopup , GoogleAuthProvider} from "firebase/auth";
+import { auth } from "../../lib/firebase"; 
+
     
 
 
@@ -67,6 +72,34 @@ const Login=()=>{
         dispatch(loginFailure(message));
       }
     };
+
+    const handleGoogleLogin = async () => {
+  try {
+    dispatch(startLoading());
+
+    const provider = new GoogleAuthProvider();
+    const result = await signInWithPopup(auth, provider);
+
+    const token = await result.user.getIdToken();
+
+    const response = await api.post("/auth/google", { token });
+
+    dispatch(loginSuccess(response.data));
+
+    const role = response.data.user?.role;
+
+    if (role === "Admin") navigate("/admin/users");
+    else if (role === "Driver") navigate("/driver/dashboard");
+    else if (role === "Fleet Manager") navigate("/fleet/users");
+    else navigate("/customer/dashboard");
+
+  } catch (err) {
+    console.error(err);
+    dispatch(loginFailure(
+      err.response?.data?.message || "Google login failed"
+    ));
+  }
+};
 
 
  return (
@@ -138,6 +171,10 @@ const Login=()=>{
               )}
             </div>
 
+            <div className="text-right mb-4  text-[#ff6e6e] hover:underline cursor-pointer text-sm font-medium" onClick={()=>navigate("/forgot-password")}>
+              Forgot password
+              </div>
+
             {/* Error */}
             {error && (
               <p className="text-red-300 text-center text-sm bg-red-500/20 p-2 rounded-lg">
@@ -153,6 +190,13 @@ const Login=()=>{
             >
               {loading ? "Logging in..." : "Login"}
             </Button>
+
+               <Button 
+                        type="button"
+                        className="w-full bg-gradient-to-r from-gray-700 to-gray-900 text-white font-semibold py-2 rounded-xl hover:scale-105 transition-all duration-300" onClick={handleGoogleLogin}>
+                         <FcGoogle className="inline mr-2" size={20} />
+                         <span> Sign Up with Google </span>
+                </Button>
 
           </form>
 

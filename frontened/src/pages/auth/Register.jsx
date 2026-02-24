@@ -6,6 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 
 import api from "../../lib/axios";
+import { FcGoogle } from "react-icons/fc";
+import { auth } from "../../lib/firebase";
 
 import {
   startLoading,
@@ -17,6 +19,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/ca
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
+import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { Link } from "react-router-dom";
 
 
 // ✅ Updated schema (removed phone & role)
@@ -62,6 +66,24 @@ const Register = () => {
       dispatch(registerFailure(message));
     }
   };
+
+  const handleGoogleAuth = async () => {
+  try {
+    const provider = new GoogleAuthProvider();
+    const result = await signInWithPopup(auth, provider);
+
+    console.log("User:", result.user);
+
+    const token = await result.user.getIdToken();
+
+    // OPTIONAL: send to backend
+    // const response = await api.post("/auth/google", { token });
+
+    navigate("/"); // redirect after success
+  } catch (error) {
+    console.error("Google Sign-in Error:", error);
+  }
+};
 
   return (
     <div className="relative flex items-center justify-center min-h-screen overflow-hidden bg-slate-950">
@@ -164,7 +186,28 @@ const Register = () => {
               {loading ? "Creating..." : "Sign Up"}
             </Button>
 
+
+            <Button 
+            type="button"
+            className="w-full bg-gradient-to-r from-gray-700 to-gray-900 text-white font-semibold py-2 rounded-xl hover:scale-105 transition-all duration-300" onClick={handleGoogleAuth}>
+             <FcGoogle className="inline mr-2" size={20} />
+             <span> Sign Up with Google </span>
+            </Button>
+
           </form>
+
+
+                <p className="text-center text-sm text-gray-300 mt-4 pt-2 border-t border-white/10">
+                            Already Registered{" "}
+                            <Link
+                              to="/login"
+                              className="text-cyan-300 font-semibold hover:text-white hover:underline transition cursor-pointer inline-block relative z-10 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-transparent rounded"
+                            >
+                              Sign In
+                            </Link>
+                          </p>
+
+
         </CardContent>
       </Card>
 

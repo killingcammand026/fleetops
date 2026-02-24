@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import { setOrders } from "../../redux/slices/orderSlice";
@@ -26,22 +26,44 @@ const AdminOrders = () => {
   fetchOrders();
 }, [dispatch]);
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (rawStatus) => {
+    const status = (rawStatus || "").toUpperCase();
     switch (status) {
-      case "pending":
+      case "CREATED":
         return "bg-yellow-100 text-yellow-800";
-      case "assigned":
+      case "DRIVER_ASSIGNED":
+      case "DRIVER_ACCEPTED":
+      case "PICKED_UP":
         return "bg-blue-100 text-blue-800";
-      case "in-transit":
+      case "IN_TRANSIT":
         return "bg-purple-100 text-purple-800";
-      case "delivered":
+      case "DELIVERED":
         return "bg-green-100 text-green-800";
-      case "cancelled":
+      case "CANCELLED":
         return "bg-red-100 text-red-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
   };
+
+  const prettyStatus = (rawStatus) => {
+    const status = (rawStatus || "").toUpperCase();
+    const map = {
+      CREATED: "Created",
+      DRIVER_ASSIGNED: "Driver Assigned",
+      DRIVER_ACCEPTED: "Driver Accepted",
+      PICKED_UP: "Picked Up",
+      IN_TRANSIT: "In Transit",
+      DELIVERED: "Delivered",
+      CANCELLED: "Cancelled",
+    };
+    return map[status] || rawStatus || "Unknown";
+  };
+
+  const safeOrders = useMemo(
+    () => (Array.isArray(orders) ? orders : []),
+    [orders]
+  );
 
   return (
     <DashboardLayout>
@@ -53,53 +75,130 @@ const AdminOrders = () => {
 
         <Card>
           <CardHeader>
-           <CardTitle>
-  Orders ({Array.isArray(orders) ? orders.length : 0})
-</CardTitle>
+            <CardTitle>
+              Orders ({safeOrders.length})
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            {orders.length === 0 ? (
+            {safeOrders.length === 0 ? (
               <div className="text-center py-12 text-gray-500">
                 <p>No orders found</p>
               </div>
             ) : (
               <div className="space-y-4">
-                {Array.isArray(orders) && orders.map((order) => (
-                  <div
-                    key={order._id}
-                    className="border rounded-lg p-4 bg-white hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <p className="font-semibold">
-                          {order.customerName || "Customer"}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          Order #{order._id.slice(-8).toUpperCase()} •{" "}
-                          {new Date(order.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <Badge className={getStatusColor(order.status)}>
-                        {order.status}
-                      </Badge>
-                    </div>
-                    <div className="text-sm space-y-1">
-                      <div>
-                        <span className="font-medium">From:</span>{" "}
-                        {order.pickupAddress}
-                      </div>
-                      <div>
-                        <span className="font-medium">To:</span>{" "}
-                        {order.deliveryAddress}
-                      </div>
-                      {order.assignedDriverId && (
-                        <div className="mt-2 text-xs text-blue-600">
-                          Driver ID: {order.assignedDriverId.slice(-6)}
+                {safeOrders
+                  .slice()
+                  .sort(
+                    (a, b) =>
+                      new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+                  )
+                  .map((order) => {
+                    const customerName =
+                      order.customer?.name ||
+                      order.customerName ||
+                      "Customer";
+                    const driverName =
+                      order.driver?.name || order.driverName || "Not assigned";
+                    const pickup =
+                      order.pickupAddress ||
+                      (order.pickupLocation?.coordinates &&
+                        `Lat ${order.pickupLocation.coordinates[1]?.toFixed(
+                          4
+                        )}, Lng ${order.pickupLocation.coordinates[0]?.toFixed(
+                          4
+                        )}`) ||
+                      "N/A";
+                    const delivery =
+                      order.deliveryAddress ||
+                      (order.dropLocation?.coordinates &&
+                        `Lat ${order.dropLocation.coordinates[1]?.toFixed(
+                          4
+                        )}, Lng ${order.dropLocation.coordinates[0]?.toFixed(
+                          4
+                        )}`) ||
+                      "N/A";
+
+                    return (
+                      <div
+                        key={order._id}
+                        className="border rounded-lg p-4 bg-white hover:shadow-md transition-shadow"
+                      >
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <p className="font-semibold">{customerName}</p>
+                            <p className="text-sm text-gray-500">
+                              Order #
+                              {order.orderId ||
+                                order._id?.slice(-8).toUpperCase()}{" "}
+                              •{" "}
+                              {order.createdAt
+                                ? new Date(
+                                    order.createdAt
+                                  ).toLocaleString()
+                                : "—"}
+                            </p>
+                            {order.deliveredAt && (
+                              <p className="text-xs text-green-700 mt-1">
+                                Delivered on{" "}
+                                {new Date(
+                                  order.deliveredAt
+                                ).toLocaleString()}
+                              </p>
+                            )}
+                          </div>
+                          <Badge className={getStatusColor(order.status)}>
+                            {prettyStatus(order.status)}
+                          </Badge>
                         </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
+
+                        <div className="text-sm space-y-1">
+                          <div>
+                            <span className="font-medium">From:</span>{" "}
+                            {pickup}
+                          </div>
+                          <div>
+                            <span className="font-medium">To:</span> {delivery}
+                          </div>
+                          <div className="mt-2">
+                            <span className="font-medium">Driver:</span>{" "}
+                            {driverName}
+                            {order.driver?.phone && (
+                              <span className="text-xs text-gray-500 ml-1">
+                                ({order.driver.phone})
+                              </span>
+                            )}
+                          </div>
+                          {order.payment && (
+                            <div className="mt-2 text-xs text-gray-600 space-y-0.5">
+                              <div>
+                                <span className="font-medium">
+                                  Payment:
+                                </span>{" "}
+                                {order.payment.method} •{" "}
+                                {order.payment.currency || "INR"}{" "}
+                                {order.payment.amount}
+                              </div>
+                              <div>
+                                <span className="font-medium">
+                                  Payment Status:
+                                </span>{" "}
+                                {order.payment.status}
+                                {order.payment.paidAt && (
+                                  <span>
+                                    {" "}
+                                    • Paid on{" "}
+                                    {new Date(
+                                      order.payment.paidAt
+                                    ).toLocaleString()}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
             )}
           </CardContent>

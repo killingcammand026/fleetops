@@ -4,10 +4,6 @@ services:
 
   mongodb:
     image: mongo:7
-    container_name: mongodb
-    restart: always
-    ports:
-      - "27017:27017"
     environment:
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: admin123
@@ -15,22 +11,24 @@ services:
       - mongo_data:/data/db
     networks:
       - backend_network
+    deploy: 
+      replicas: 1
+      restart_policy:
+        condition: on-failure
   
   redis:
     image: redis:7
-    container_name: redis
-    restart: always
-    ports:
-      - "6379:6379"
     volumes:
       - redis_data:/data
     networks:
       - backend_network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
   
   backend:
-    build: .
-    container_name: backend
-    restart: always
+    image: killingcammand/fleetops_backend:latest
     ports:
       - "5000:5000"
     env_file:
@@ -40,6 +38,10 @@ services:
       - redis
     networks:
       - backend_network
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
 
 volumes:
   mongo_data: 
@@ -47,3 +49,4 @@ volumes:
 
 networks:
   backend_network:
+   external: true

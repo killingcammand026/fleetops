@@ -75,7 +75,6 @@ const CreateOrderForm = () => {
 
     try {
       let newOrder = await createOrderAPI(data);
-      const orderId = newOrder._id;
       const paymentMethod = (data.paymentMethod || "").trim();
 
       dispatch(addOrder(newOrder));
@@ -87,43 +86,11 @@ const CreateOrderForm = () => {
         return;
       }
 
-      // Non-COD: create Razorpay order and open checkout
-      const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID;
-      if (!keyId) {
-        toast.error("Payment setup missing. Set VITE_RAZORPAY_KEY_ID in .env.");
-        setLoading(false);
-        return;
-      }
-
-      const { razorpayOrder } = await createPaymentOrderAPI(orderId);
-      if (!razorpayOrder || !razorpayOrder.id) {
-        toast.error("Could not create payment session.");
-        setLoading(false);
-        return;
-      }
-
-      await loadRazorpayScript();
-      const payment = await openRazorpayCheckout({
-        key: keyId,
-        amount: razorpayOrder.amount,
-        currency: razorpayOrder.currency || "INR",
-        order_id: razorpayOrder.id,
-        name: "FleetOps",
-        description: "Order payment",
-      }).catch(() => null);
-
-      if (!payment) {
-        toast.info("Payment cancelled or closed.");
-        setLoading(false);
-        return;
-      }
-
-      await verifyPaymentOrderAPI(orderId, {
-        razorpayOrderId: payment.razorpay_order_id,
-        razorpayPaymentId: payment.razorpay_payment_id,
-        razorpaySignature: payment.razorpay_signature,
-      });
-      toast.success("Order placed and payment completed successfully!");
+      // For non-COD methods, do NOT charge immediately.
+      // We first need to ensure a driver is assigned; payment will be handled later.
+      toast.success(
+        "Order created. Looking for the nearest available driver..."
+      );
       reset();
     } catch (err) {
       console.error("Create Order Error:", err.response?.data || err);
@@ -137,7 +104,6 @@ const CreateOrderForm = () => {
             name: user.name || "Customer",
           });
           const retryOrder = await createOrderAPI(data);
-          const orderId = retryOrder._id;
           const paymentMethod = (data.paymentMethod || "").trim();
 
           dispatch(addOrder(retryOrder));
@@ -149,42 +115,9 @@ const CreateOrderForm = () => {
             return;
           }
 
-          const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID;
-          if (!keyId) {
-            toast.error("Payment setup missing. Set VITE_RAZORPAY_KEY_ID in .env.");
-            setLoading(false);
-            return;
-          }
-
-          const { razorpayOrder } = await createPaymentOrderAPI(orderId);
-          if (!razorpayOrder || !razorpayOrder.id) {
-            toast.error("Could not create payment session.");
-            setLoading(false);
-            return;
-          }
-
-          await loadRazorpayScript();
-          const payment = await openRazorpayCheckout({
-            key: keyId,
-            amount: razorpayOrder.amount,
-            currency: razorpayOrder.currency || "INR",
-            order_id: razorpayOrder.id,
-            name: "FleetOps",
-            description: "Order payment",
-          }).catch(() => null);
-
-          if (!payment) {
-            toast.info("Payment cancelled or closed.");
-            setLoading(false);
-            return;
-          }
-
-          await verifyPaymentOrderAPI(orderId, {
-            razorpayOrderId: payment.razorpay_order_id,
-            razorpayPaymentId: payment.razorpay_payment_id,
-            razorpaySignature: payment.razorpay_signature,
-          });
-          toast.success("Order placed and payment completed successfully!");
+          toast.success(
+            "Order created. Online payment will be requested after a driver is assigned."
+          );
           reset();
           return;
         } catch (innerErr) {

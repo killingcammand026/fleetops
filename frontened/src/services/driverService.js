@@ -33,6 +33,9 @@ export const deleteDriverAPI = async (id) => {
 };
 
 export const updateDriverLocationAPI = async (id, longitude, latitude) => {
-  const res = await api.patch(`${BASE}/${id}`, { longitude, latitude });
+  const res = await api.put(`${BASE}/${id}/location`, {
+    longitude,
+    latitude,
+  });
   return res;
 };

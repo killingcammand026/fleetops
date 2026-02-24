@@ -102,6 +102,8 @@ const statusColor = (status) => {
                         <div>
                           <p className="font-semibold text-gray-900">{d.name ?? "—"}</p>
                           <p className="text-sm text-gray-500">{d.phone ?? "—"}</p>
+                          
+        
                         </div>
                         <Badge className={statusColor(d.status)}>
                           {d.status ?? "Offline"}
