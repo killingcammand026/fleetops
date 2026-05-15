@@ -2,7 +2,6 @@ import DriverMap from "./DriverMap";
 import LocationTracker from "./LocationTracker";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 
-
 const DriverMapViewer = () => {
   return (
     <DashboardLayout>

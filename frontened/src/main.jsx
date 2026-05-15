@@ -6,6 +6,7 @@ import { Provider } from 'react-redux'
 import { PersistGate } from 'redux-persist/integration/react'
 import store, { persistor } from './redux/store.js'
 import { Toaster } from './components/ui/sonner.jsx'
+import "leaflet/dist/leaflet.css";
 
 function LoadingFallback() {
   return (
