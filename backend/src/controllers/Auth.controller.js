@@ -9,6 +9,8 @@ import admin from "../config/firebaseAdmin.js";
 import jwt from "jsonwebtoken";
 import User from "../models/User.model.js";
 import Customer from "../models/Customer.model.js";
+const signupOtpStore = new Map();
+const verifiedSignupEmails = new Set();
 
 import { sendOtpMail } from "../utils/mail.js";
 export const googleAuthController = async (req, res) => {
@@ -67,16 +69,47 @@ export const googleAuthController = async (req, res) => {
 
 
 
-export const registerController=async(req,res)=>{
-    const {name,email,password}=req.body;
-    try{
-        const user=await registerService(name,email,password);
+// export const registerController=async(req,res)=>{
+//     const {name,email,password}=req.body;
+//     try{
+//         const user=await registerService(name,email,password);
+//         res.status(201).json(user);
+//     }
+//     catch(error){
+//         res.status(400).json({error:error.message});
+//     }
+// };
+
+
+export const registerController = async (req, res) => {
+    const { name, email, password } = req.body;
+
+    try {
+
+        if (!verifiedSignupEmails.has(email)) {
+            return res.status(400).json({
+                message: "Please verify OTP first",
+            });
+        }
+
+        const user = await registerService(
+            name,
+            email,
+            password
+        );
+
+        verifiedSignupEmails.delete(email);
+
         res.status(201).json(user);
-    }
-    catch(error){
-        res.status(400).json({error:error.message});
+
+    } catch (error) {
+        res.status(400).json({
+            error: error.message,
+        });
     }
 };
+
+
 export const loginController=async(req,res)=>{
     const {email,password}=req.body;
     try{
@@ -108,7 +141,8 @@ export const sendOtp=async (req,res)=>{
         await sendOtpMail(email,otp);
         res.status(200).json({message:"OTP sent to email"});
     }catch(error){
-        res.status(500).json({message:"Failed to send OTP"});
+        console.error("Error sending OTP:", error);
+        res.status(500).json({message:"Failed to send OTP", error: error.message});
     }
 }
 
@@ -145,3 +179,89 @@ export const resetPassword=async (req,res)=>{
         res.status(500).json({message:"Failed to reset password"});
     }
 }
+
+
+export const sendSignupOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+    console.log('sendSignupOtp invoked for:', email);
+
+    // Check existing user
+    const existingUser = await User.findOne({ email });
+
+    if (existingUser) {
+      return res.status(400).json({
+        message: "User already exists",
+      });
+    }
+
+    // Generate OTP
+    const otp = Math.floor(
+      1000 + Math.random() * 9000
+    ).toString();
+
+    // Store temporarily
+    signupOtpStore.set(email, {
+      otp,
+      expires: Date.now() + 5 * 60 * 1000,
+    });
+
+    // Send mail
+    await sendOtpMail(email, otp);
+
+    res.status(200).json({
+      message: "OTP sent successfully",
+    });
+
+  } catch (error) {
+    console.error("Error sending signup OTP:", error);
+    res.status(500).json({
+      message: "Failed to send OTP",
+      error: error.message,
+    });
+  }
+};
+
+
+
+export const verifySignupOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    const storedData = signupOtpStore.get(email);
+
+    if (!storedData) {
+      return res.status(400).json({
+        message: "OTP not found",
+      });
+    }
+
+    if (storedData.otp !== otp) {
+      return res.status(400).json({
+        message: "Invalid OTP",
+      });
+    }
+
+    if (storedData.expires < Date.now()) {
+      signupOtpStore.delete(email);
+
+      return res.status(400).json({
+        message: "OTP expired",
+      });
+    }
+
+   signupOtpStore.delete(email);
+
+// Mark email as verified
+verifiedSignupEmails.add(email);
+
+res.status(200).json({
+  message: "OTP verified successfully",
+});
+
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to verify OTP",
+    });
+  }
+};

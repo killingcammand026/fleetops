@@ -34,6 +34,9 @@ const Register = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { loading, error } = useSelector((state) => state.auth);
+  const [step, setStep] = React.useState(1);
+const [otp, setOtp] = React.useState("");
+const [formData, setFormData] = React.useState(null);
 
   const {
     register,
@@ -43,29 +46,77 @@ const Register = () => {
     resolver: zodResolver(schema),
   });
 
-  const onSubmit = async (data) => {
-    try {
-      dispatch(startLoading());
+const onSubmit = async (data) => {
+  try {
+    dispatch(startLoading());
 
-      const response = await api.post("/auth/register", data);
-      dispatch(registerSuccess(response.data));
+    // Save form temporarily
+    setFormData(data);
 
-      const role = response.data.role || response.data.user?.role;
-      if (role === "Admin") navigate("/admin/users");
-      else if (role === "Driver") navigate("/driver/dashboard");
-      else if (role === "Fleet Manager" || role === "FleetManager") navigate("/fleet/users");
-      else if (role === "Customer") navigate("/customer/dashboard");
-      else navigate("/");
-    } catch (err) {
-      const message =
+    // Send OTP
+   await api.post("/auth/send-signup-otp", {
+  email: data.email,
+});
+
+    setStep(2);
+
+  } catch (err) {
+    const message =
+      err.response?.data?.message || "Failed to send OTP";
+
+    dispatch(registerFailure(message));
+  }
+};
+
+
+const handleVerifyOtp = async () => {
+  try {
+    dispatch(startLoading());
+
+    // Verify OTP
+    await api.post("/auth/verify-signup-otp", {
+  email: formData.email,
+  otp,
+});
+
+    // Create Account after verification
+    const response = await api.post(
+      "/auth/register",
+      formData
+    );
+
+    dispatch(registerSuccess(response.data));
+
+    const role =
+      response.data.role || response.data.user?.role;
+
+    if (role === "Admin")
+      navigate("/admin/users");
+
+    else if (role === "Driver")
+      navigate("/driver/dashboard");
+
+    else if (
+      role === "Fleet Manager" ||
+      role === "FleetManager"
+    )
+      navigate("/fleet/users");
+
+    else if (role === "Customer")
+      navigate("/customer/dashboard");
+
+    else navigate("/");
+
+  } catch (err) {
+    dispatch(
+      registerFailure(
         err.response?.data?.message ||
-        (err.code === "ERR_NETWORK" || err.message === "Network Error"
-          ? "Registration failed"
-          : err.message) ||
-        "Registration failed";
-      dispatch(registerFailure(message));
-    }
-  };
+        "OTP verification failed"
+      )
+    );
+  }
+};
+
 
   const handleGoogleAuth = async () => {
   try {
@@ -170,6 +221,42 @@ const Register = () => {
               )}
             </div>
 
+
+
+
+             
+              {step === 2 && (
+  <div>
+    <Label className="text-gray-200">
+      OTP
+    </Label>
+
+    <Input
+      type="text"
+      placeholder="Enter OTP"
+      value={otp}
+      onChange={(e) => setOtp(e.target.value)}
+      className="mt-2 bg-white/25 border-white/40 text-white 
+      placeholder:text-white placeholder:opacity-80
+      focus:bg-white/35 focus:ring-2 focus:ring-cyan-400 
+      transition-all duration-300"
+    />
+
+    <Button
+      type="button"
+      onClick={handleVerifyOtp}
+      className="w-full mt-4 bg-gradient-to-r from-cyan-400 to-indigo-500 text-white font-semibold py-2 rounded-xl"
+    >
+      Verify OTP & Create Account
+    </Button>
+  </div>
+)}
+
+
+
+
+
+
             {/* Error */}
             {error && (
               <p className="text-red-300 text-center text-sm bg-red-500/20 p-2 rounded-lg">
@@ -178,14 +265,15 @@ const Register = () => {
             )}
 
             {/* Button */}
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-cyan-400 to-indigo-500 text-white font-semibold py-2 rounded-xl hover:scale-105 transition-all duration-300"
-            >
-              {loading ? "Creating..." : "Sign Up"}
-            </Button>
-
+           {step === 1 && (
+  <Button
+    type="submit"
+    disabled={loading}
+    className="w-full bg-gradient-to-r from-cyan-400 to-indigo-500 text-white font-semibold py-2 rounded-xl hover:scale-105 transition-all duration-300"
+  >
+    {loading ? "Sending OTP..." : "Send OTP"}
+  </Button>
+)}
 
             <Button 
             type="button"

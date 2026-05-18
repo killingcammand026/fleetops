@@ -15,6 +15,11 @@ app.use(cors({
   origin:"http://localhost:5173",
   credentials:true
 }));
+// simple request logger to help debug 404s from frontend
+app.use((req, res, next) => {
+  console.log(new Date().toISOString(), req.method, req.originalUrl);
+  next();
+});
 app.use("/api/payment/webhook",
     express.raw({type:"application/json"})
 );
