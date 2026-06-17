@@ -1,11 +1,11 @@
 import http from "http";
 import dotenv from "dotenv";
+dotenv.config();
 
 import app from "./app.js";
 import connectDB from "./config/db.js";
 import initializeSocket from "./sockets/index.socket.js";
 
-dotenv.config();
 
 const server = http.createServer(app);
 
