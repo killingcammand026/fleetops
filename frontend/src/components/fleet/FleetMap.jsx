@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { getAllDriversAPI } from "../../services/driverService";
-import { setDrivers } from "../../redux/slices/driverSlice";
+import { getAllDriversAPI } from "../../services/driverService.js";
+import { setDrivers } from "../../redux/slices/driverSlice.js";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import scooterIcon from "../../assets/scooter.png";
