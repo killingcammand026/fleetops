@@ -51,6 +51,8 @@ services:
     depends_on:
       - mongodb
       - redis
+    networks:
+      - backend_network
 
 volumes:
   mongo_data: 
