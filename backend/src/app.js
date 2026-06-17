@@ -15,7 +15,8 @@ import paymentRoutes from "./routes/Payment.routes.js"
 
 const app = express();
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: process.env.CORS_ORIGIN|| "http://localhost:5173",
+          
   credentials: true
 }));
 // simple request logger to help debug 404s from frontend
