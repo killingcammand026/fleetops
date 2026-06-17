@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Sidebar from "./Sidebar";
-import AppHeader from "./AppHeader";
-import AppFooter from "./AppFooter";
+import AppHeader from "./AppHeader.jsx";
+import AppFooter from "./AppFooter.jsx";
 import { useSelector } from "react-redux";
 
 const DashboardLayout = ({ children }) => {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import DashboardLayout from "../../components/layout/DashboardLayout";
+import DashboardLayout from "../../components/layout/DashboardLayout.jsx";
 import {
   startLoading,
   setUsers,

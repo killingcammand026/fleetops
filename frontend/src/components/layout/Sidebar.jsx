@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { logout } from "../../redux/slices/authSlice";
+import { logout } from "../../redux/slices/authSlice.js";
 
 const Sidebar = ({ role, isOpen = false, onClose }) => {
   const location = useLocation();
