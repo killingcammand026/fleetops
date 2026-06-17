@@ -4,7 +4,6 @@ import {
     
 } from '../services/Auth.service.js';
 import bcrypt from "bcrypt";
-
 import admin from "../config/firebaseAdmin.js";
 import jwt from "jsonwebtoken";
 import User from "../models/User.model.js";

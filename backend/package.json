@@ -8,9 +8,10 @@
   "main": "src/app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon src/server.js",
-    "worker": "nodemon src/worker.js",
-    "dev": "concurrently \"nodemon src/server.js\" \"nodemon src/worker.js\""
+    "server": "node src/server.js",
+    "worker": "node src/worker.js",
+    "dev": "concurrently \"nodemon src/server.js\" \"nodemon src/worker.js\"",
+    "start": "concurrently \"node src/server.js\" \"node src/worker.js\""
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
