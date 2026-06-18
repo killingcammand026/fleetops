@@ -1,4 +1,4 @@
-import React,{useEffect} from "react";
+import React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 
 import { FcGoogle } from "react-icons/fc";
-import { signInWithPopup , GoogleAuthProvider,signInWithRedirect,getRedirectResult} from "firebase/auth";
+import { signInWithPopup , GoogleAuthProvider} from "firebase/auth";
 import { auth } from "../../lib/firebase"; 
 
     
@@ -40,31 +40,7 @@ const Login=()=>{
     React.useEffect(() => {
         dispatch(resetLoginForm());
     }, [dispatch]);
-        // CHANGED: added this useEffect to handle the result after Google redirects back
-    React.useEffect(() => {
-        const handleRedirectResult = async () => {
-            try {
-                const result = await getRedirectResult(auth);
-                console.log("Google redirect result:", result); // Log the result for debugging
-                if (!result) return; // no redirect happened, skip
 
-                dispatch(startLoading());
-                const token = await result.user.getIdToken();
-                const response = await api.post("/auth/google", { token });
-                dispatch(loginSuccess(response.data));
-
-                const role = response.data.user?.role;
-                if (role === "Admin") navigate("/admin/users");
-                else if (role === "Driver") navigate("/driver/dashboard");
-                else if (role === "Fleet Manager") navigate("/fleet/users");
-                else navigate("/customer/dashboard");
-            } catch (err) {
-                console.error(err);
-                dispatch(loginFailure(err.response?.data?.message || "Google login failed"));
-            }
-        };
-        handleRedirectResult();
-    }, []);
     const {register,
         handleSubmit,
         formState:{errors},
@@ -102,22 +78,20 @@ const Login=()=>{
     dispatch(startLoading());
 
     const provider = new GoogleAuthProvider();
-    await signInWithRedirect(auth, provider);
-    // const result = await signInWithRedirect(auth, provider);
+    const result = await signInWithPopup(auth, provider);
 
-    // const token = await result.user.getIdToken();
-    // console.log("Google ID Token:", token); // Log the token for debugging
+    const token = await result.user.getIdToken();
 
-    // const response = await api.post("/auth/google", { token });
+    const response = await api.post("/auth/google", { token });
 
-    // dispatch(loginSuccess(response.data));
+    dispatch(loginSuccess(response.data));
 
-    // const role = response.data.user?.role;
+    const role = response.data.user?.role;
 
-    // if (role === "Admin") navigate("/admin/users");
-    // else if (role === "Driver") navigate("/driver/dashboard");
-    // else if (role === "Fleet Manager") navigate("/fleet/users");
-    // else navigate("/customer/dashboard");
+    if (role === "Admin") navigate("/admin/users");
+    else if (role === "Driver") navigate("/driver/dashboard");
+    else if (role === "Fleet Manager") navigate("/fleet/users");
+    else navigate("/customer/dashboard");
 
   } catch (err) {
     console.error(err);
@@ -258,4 +232,3 @@ const Login=()=>{
 };
 
 export default Login;
-
