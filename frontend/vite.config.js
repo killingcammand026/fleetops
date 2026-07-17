@@ -12,5 +12,24 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+
   },
+   server: {
+    host: "0.0.0.0",
+    port: 5173,
+    strictPort: true,
+
+    hmr: {
+      clientPort: 443
+    },
+
+    allowedHosts: true,
+
+    proxy: {
+      "/api": {
+        target: "http://localhost:5000",
+        changeOrigin: true
+      }
+    }
+  }
 })
