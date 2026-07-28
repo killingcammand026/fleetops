@@ -54,7 +54,7 @@ services:
       dockerfile: Dockerfile
     container_name: backend
     restart: always
-    command: npm server
+    command: npm run server
     ports:
       - "5000:5000"
     env_file:
@@ -73,7 +73,7 @@ services:
     image: killingcammand/fleet-management-backend:latest
     container_name: worker
     restart: always
-    command: npm worker
+    command: npm run worker
     env_file:
       - .env
     volumes:
