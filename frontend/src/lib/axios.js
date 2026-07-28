@@ -4,13 +4,8 @@ import { logout } from "../redux/slices/authSlice";
 
 // Create Axios instance
 const api = axios.create({
-<<<<<<< HEAD:frontened/src/lib/axios.js
   baseURL: "/api", 
   withCredentials: true, 
-=======
-  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api",
-  withCredentials: true,
->>>>>>> af2f52d2731aedc7976b514fc60201aec829b954:frontend/src/lib/axios.js
 });
  
 api.interceptors.request.use(
